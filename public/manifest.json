@@ -1,0 +1,30 @@
+{
+  "name": "AstroLord - Vedic Astrology Platform",
+  "short_name": "AstroLord",
+  "description": "Generate precise Vedic astrology birth charts, explore planetary positions, divisional charts, dashas, and chat with our AI astrologer for personalized cosmic insights.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "gcm_sender_id": "776238367032",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": [
+    "lifestyle",
+    "education"
+  ],
+  "lang": "en-US",
+  "dir": "ltr"
+}

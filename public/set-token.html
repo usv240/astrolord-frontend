@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Set Admin Token</title>
+</head>
+<body>
+    <h1>Admin Token Injector</h1>
+    <p>This will set the authentication token in localStorage</p>
+    <button onclick="setToken()">Set Token for admin@test.com</button>
+    <p id="status"></p>
+    
+    <script>
+    async function setToken() {
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkB0ZXN0LmNvbSIsImV4cCI6MTc2NzMwNTc1MSwiaWF0IjoxNzY3MjE5MzUxfQ.unitzEFkn7VtW7lkGLf_Kr5fkKCkDq5pyk5ZNfsqfVM';
+        
+        const user = {
+            id: 'test-admin-id',
+            email: 'admin@test.com',
+            name: 'Test Admin',
+            is_admin: true
+        };
+        
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        document.getElementById('status').innerHTML = '<span style="color: green; font-weight: bold;">✓ Token set! Redirecting to admin dashboard...</span>';
+        
+        setTimeout(() => {
+            window.location.href = '/admin';
+        }, 1500);
+    }
+    </script>
+</body>
+</html>

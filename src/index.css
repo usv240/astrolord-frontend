@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 240 30% 7%;
+    --foreground: 240 10% 95%;
+
+    --card: 240 25% 10%;
+    --card-foreground: 240 10% 95%;
+
+    --popover: 240 25% 10%;
+    --popover-foreground: 240 10% 95%;
+
+    --primary: 271 81% 56%;
+    --primary-foreground: 240 10% 95%;
+
+    --secondary: 220 70% 50%;
+    --secondary-foreground: 240 10% 95%;
+
+    --muted: 240 20% 15%;
+    --muted-foreground: 240 10% 60%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 240 30% 7%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 240 10% 95%;
+
+    --border: 240 20% 18%;
+    --input: 240 20% 18%;
+    --ring: 271 81% 56%;
+
+    --radius: 0.75rem;
+
+    --cosmic-purple: 271 81% 56%;
+    --cosmic-blue: 220 70% 50%;
+    --cosmic-gold: 45 93% 47%;
+    --cosmic-dark: 240 30% 7%;
+    --cosmic-darker: 240 40% 4%;
+    
+    --gradient-cosmic: linear-gradient(135deg, hsl(271 81% 56% / 0.2), hsl(220 70% 50% / 0.2));
+    --gradient-nebula: linear-gradient(to bottom right, hsl(271 81% 56% / 0.3), hsl(220 70% 50% / 0.3), hsl(240 30% 7%));
+    --glow-purple: 0 0 30px hsl(271 81% 56% / 0.4);
+    --glow-blue: 0 0 30px hsl(220 70% 50% / 0.4);
+    
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .light {
+    --background: 48 15% 97%;
+    --foreground: 240 10% 3.9%;
+    --card: 48 20% 99%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 48 20% 99%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 271 81% 56%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 70% 50%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 45 20% 96%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 240 10% 3.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 45 15% 88%;
+    --input: 45 15% 88%;
+    --ring: 271 81% 56%;
+    --cosmic-purple: 271 81% 56%;
+    --cosmic-blue: 220 70% 50%;
+    --cosmic-gold: 45 93% 47%;
+    --cosmic-dark: 48 25% 96%;
+    --cosmic-darker: 48 30% 98%;
+    --sidebar-background: 48 25% 97%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 48 20% 98%;
+    --sidebar-accent: 45 30% 94%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 45 20% 90%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 240 40% 4%;
+    --foreground: 240 5% 90%;
+  }
+}
+
+@layer utilities {
+  .cosmic-glow {
+    box-shadow: var(--glow-purple);
+  }
+  
+  .cosmic-glow-blue {
+    box-shadow: var(--glow-blue);
+  }
+  
+  .gradient-cosmic {
+    background: var(--gradient-cosmic);
+  }
+  
+  .gradient-nebula {
+    background: var(--gradient-nebula);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
