@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, Plus, Sparkles, MessageSquare, Settings, Heart, Users, Trash2, HelpCircle, User, ChevronDown, Mail, Shield, Menu } from 'lucide-react';
+import { LogOut, Plus, Sparkles, MessageSquare, Settings, Heart, Users, Trash2, HelpCircle, User, ChevronDown, Mail, Shield, Menu, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   DropdownMenu,
@@ -14,6 +14,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ChartCreator from '@/components/ChartCreator';
 import ChartList from '@/components/ChartList';
 import AIChat from '@/components/AIChat';
@@ -26,8 +36,13 @@ import { QuotaWidget } from '@/components/QuotaWidget';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { DashboardNav } from '@/components/DashboardNav';
 import { DashboardHome } from '@/components/DashboardHome';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { ChatChartSelector } from '@/components/ChatChartSelector';
 import { useQuota } from '@/hooks/useQuota';
 import { toast } from 'sonner';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('Dashboard');
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -45,6 +60,11 @@ const Dashboard = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [deleteMatchConfirm, setDeleteMatchConfirm] = useState<{ open: boolean; matchId: string | null; matchName: string }>({
+    open: false,
+    matchId: null,
+    matchName: '',
+  });
 
   useEffect(() => {
     if (!user) {
@@ -58,12 +78,20 @@ const Dashboard = () => {
     if (activeTab === 'relationship' && user) {
       relationshipAPI.listMatches()
         .then(res => setRecentMatches(res.data))
-        .catch(console.error);
+        .catch(err => log.error('Failed to load matches', { error: String(err) }));
     }
   }, [activeTab, user]);
 
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm("Are you sure you want to delete this match?")) return;
+  const openDeleteMatchConfirm = useCallback((matchId: string, matchName: string) => {
+    setDeleteMatchConfirm({ open: true, matchId, matchName });
+  }, []);
+
+  const handleDeleteMatch = useCallback(async () => {
+    if (!deleteMatchConfirm.matchId) return;
+    
+    const matchId = deleteMatchConfirm.matchId;
+    setDeleteMatchConfirm({ open: false, matchId: null, matchName: '' });
+    
     try {
       await relationshipAPI.deleteMatch(matchId);
       setRecentMatches(prev => prev.filter(m => m.match_id !== matchId));
@@ -73,23 +101,14 @@ const Dashboard = () => {
         setSearchParams(newParams);
       }
     } catch (error) {
-      console.error("Failed to delete match", error);
+      log.error('Failed to delete match', { error: String(error) });
     }
-  };
+  }, [selectedMatchId, searchParams, setSearchParams]);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     const newParams = new URLSearchParams(searchParams);
 
-    // If navigating to chat without a chart selected, redirect to charts
-    if (value === 'chat' && !searchParams.get('chartId')) {
-      toast.info('Please select a chart first', {
-        description: 'Choose a chart from your collection to start chatting',
-      });
-      newParams.set('tab', 'charts');
-      setSearchParams(newParams);
-      return;
-    }
-
+    // Allow navigation to chat tab - show inline chart selector if no chart selected
     newParams.set('tab', value);
     if (value !== 'charts') {
       newParams.delete('mode');
@@ -99,14 +118,14 @@ const Dashboard = () => {
       newParams.delete('chartId');
     }
     setSearchParams(newParams);
-  };
+  }, [searchParams, setSearchParams]);
 
-  const handleChartSelect = (chartId: string) => {
+  const handleChartSelect = useCallback((chartId: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', 'chat');
     newParams.set('chartId', chartId);
     setSearchParams(newParams);
-  };
+  }, [searchParams, setSearchParams]);
 
   if (!user) {
     return null;
@@ -240,7 +259,7 @@ const Dashboard = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="space-y-6 px-4 lg:px-8 py-8 max-w-6xl">
+            <main className="space-y-6 px-4 lg:px-8 py-8 pb-24 lg:pb-8 max-w-6xl">
               {/* Home Tab - New Overview Page */}
               {activeTab === 'home' && (
                 <DashboardHome
@@ -321,18 +340,25 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-bold">Chat with AI Astrologer</h1>
                     <p className="text-muted-foreground">Ask anything about your chart and get instant insights</p>
                   </div>
-                  <AIChat
-                    chartId={selectedChartId}
-                    mode={viewMode === 'daily' ? 'daily' : 'analysis'}
-                    onSwitchChart={handleChartSelect}
-                    onBack={() => {
-                      const newParams = new URLSearchParams(searchParams);
-                      newParams.set('tab', 'charts');
-                      // Don't delete chartId, so we go back to the specific chart detail view
-                      newParams.delete('mode'); // Clear mode to return to standard view
-                      setSearchParams(newParams);
-                    }}
-                  />
+                  {selectedChartId ? (
+                    <AIChat
+                      chartId={selectedChartId}
+                      mode={viewMode === 'daily' ? 'daily' : 'analysis'}
+                      onSwitchChart={handleChartSelect}
+                      onBack={() => {
+                        const newParams = new URLSearchParams(searchParams);
+                        newParams.set('tab', 'charts');
+                        // Don't delete chartId, so we go back to the specific chart detail view
+                        newParams.delete('mode'); // Clear mode to return to standard view
+                        setSearchParams(newParams);
+                      }}
+                    />
+                  ) : (
+                    <ChatChartSelector
+                      onSelectChart={handleChartSelect}
+                      onCreateChart={() => handleTabChange('create')}
+                    />
+                  )}
                 </div>
               )}
 
@@ -395,7 +421,7 @@ const Dashboard = () => {
                                     className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleDeleteMatch(m.match_id);
+                                      openDeleteMatchConfirm(m.match_id, `${m.p1_name} & ${m.p2_name}`);
                                     }}
                                   >
                                     <Trash2 className="h-3 w-3" />
@@ -454,9 +480,37 @@ const Dashboard = () => {
             </main>
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
+
+      {/* Delete Match Confirmation Dialog */}
+      <AlertDialog open={deleteMatchConfirm.open} onOpenChange={(open) => !open && setDeleteMatchConfirm({ open: false, matchId: null, matchName: '' })}>
+        <AlertDialogContent className="border-border/50 bg-card/95 backdrop-blur-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Match
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Are you sure you want to delete the match <span className="font-semibold text-foreground">"{deleteMatchConfirm.matchName}"</span>? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border/50">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMatch}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Match
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
 
-export default Dashboard;
+export default memo(Dashboard);

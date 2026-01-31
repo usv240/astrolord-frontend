@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { paymentAPI, SubscriptionStatus } from '@/lib/payment-api';
+import { createLogger } from '@/utils/logger';
+import { POLLING } from '@/config/constants';
+
+const log = createLogger('useSubscription');
 
 export const useSubscription = () => {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
@@ -13,7 +17,7 @@ export const useSubscription = () => {
       setSubscription(response.data);
       setError(null);
     } catch (err: any) {
-      console.error('Failed to fetch subscription:', err);
+      log.error('Failed to fetch subscription', { error: err.message });
       setError(err.message || 'Failed to load subscription');
       setSubscription(null);
     } finally {
@@ -24,8 +28,8 @@ export const useSubscription = () => {
   useEffect(() => {
     fetchSubscription();
 
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(fetchSubscription, 5 * 60 * 1000);
+    // Auto-refresh subscription status periodically
+    const interval = setInterval(fetchSubscription, POLLING.SUBSCRIPTION_STATUS);
 
     // Listen for subscription updates
     const handleUpdate = () => fetchSubscription();

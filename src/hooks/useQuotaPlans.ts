@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { quotaAPI } from '@/lib/api';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('useQuotaPlans');
 
 interface PlanQuotas {
     charts: number;
@@ -35,7 +38,7 @@ export function useQuotaPlans() {
                 setPlans(response.data.plans);
                 setError(null);
             } catch (err: any) {
-                console.error('Failed to fetch quota plans:', err);
+                log.error('Failed to fetch quota plans', { error: err.message });
                 setError('Failed to load plan information');
                 // Use fallback defaults if API fails
                 setPlans([

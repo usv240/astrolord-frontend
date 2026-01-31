@@ -3,6 +3,7 @@ import { DollarSign, Globe, Layers, RefreshCw, Save, Eye, AlertCircle, Plus, Edi
 import adminAPI from '@/lib/adminAPI';
 import AdminLayout from '@/components/AdminLayout';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/utils/errorHelpers';
 
 interface Product {
     _id: string;
@@ -145,7 +146,7 @@ export default function AdminPricingPage() {
             setEditingProduct(null);
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Update failed');
+            toast.error(getErrorMessage(err, 'Update failed'));
         }
     };
 
@@ -156,7 +157,7 @@ export default function AdminPricingPage() {
             setEditingCountry(null);
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Update failed');
+            toast.error(getErrorMessage(err, 'Update failed'));
         }
     };
 
@@ -176,7 +177,7 @@ export default function AdminPricingPage() {
             });
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Add failed');
+            toast.error(getErrorMessage(err, 'Add failed'));
         }
     };
 
@@ -187,7 +188,7 @@ export default function AdminPricingPage() {
             setEditingTier(null);
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Update failed');
+            toast.error(getErrorMessage(err, 'Update failed'));
         }
     };
 
@@ -208,7 +209,7 @@ export default function AdminPricingPage() {
             setNewOverrideForm({ product_key: '', country_code: '', price: 0, reason: '' });
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Failed to set override');
+            toast.error(getErrorMessage(err, 'Failed to set override'));
         }
     };
 
@@ -218,7 +219,7 @@ export default function AdminPricingPage() {
             toast.success('Override removed');
             fetchData();
         } catch (err: any) {
-            toast.error(err.response?.data?.detail || 'Failed to delete override');
+            toast.error(getErrorMessage(err, 'Failed to delete override'));
         }
     };
 

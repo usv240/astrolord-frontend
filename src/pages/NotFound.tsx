@@ -3,12 +3,15 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Home, Search, BookOpen, MessageCircle, ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { createLogger } from "@/utils/logger";
+
+const log = createLogger("NotFound");
 
 const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    log.warn("404 Error: User attempted to access non-existent route", { path: location.pathname });
   }, [location.pathname]);
 
   return (

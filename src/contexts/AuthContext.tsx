@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { trackLogin, trackSignUp, setAnalyticsUserId, setAnalyticsUserProperties } from '@/lib/analytics';
+import { getErrorMessage } from '@/utils/errorHelpers';
 
 interface User {
   id: string;
@@ -99,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast.success('Welcome back!');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error(getErrorMessage(error, 'Login failed'));
       throw error;
     }
   };
@@ -109,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await authAPI.register(email, password, name);
       toast.success('Verification code sent to your email!');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      toast.error(getErrorMessage(error, 'Registration failed'));
       throw error;
     }
   };
@@ -131,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       toast.success('Email verified successfully!');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Verification failed');
+      toast.error(getErrorMessage(error, 'Verification failed'));
       throw error;
     }
   };

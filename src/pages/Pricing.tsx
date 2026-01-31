@@ -6,10 +6,21 @@ import { useQuotaPlans } from '@/hooks/useQuotaPlans';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, Sparkles, ArrowLeft, Rocket, MessageSquare, BarChart3, Dumbbell, TrendingUp, Heart, Calendar, Target, Zap, Lock } from 'lucide-react';
+import { Check, Loader2, Sparkles, ArrowLeft, Rocket, MessageSquare, BarChart3, Dumbbell, TrendingUp, Heart, Calendar, Target, Zap, Lock, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PromoCodeInput } from '@/components/PromoCodeInput';
+import { PageSEO } from '@/components/SEO';
+import { createLogger } from '@/utils/logger';
+import {
+  trackFunnelStep,
+  trackSubscriptionStarted,
+  trackPaymentFailed,
+  trackButtonClick,
+  trackConversion,
+} from '@/lib/analytics';
+
+const log = createLogger('Pricing');
 
 // Razorpay configuration - UPDATE THIS WITH YOUR KEY
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID';
@@ -79,7 +90,12 @@ const Pricing = () => {
   };
 
   const handleCheckout = async (planType: string) => {
+    // Track checkout button click
+    trackButtonClick(`subscribe_${planType}`, 'pricing_page');
+    trackFunnelStep('subscription', 1, 'checkout_initiated');
+
     if (!user) {
+      trackFunnelStep('subscription', 0, 'login_required');
       navigate('/login');
       return;
     }
@@ -96,6 +112,9 @@ const Pricing = () => {
       // Create order
       const orderResponse = await paymentAPI.createOrder([planType]);
       const order = orderResponse.data.order;
+      
+      // Track order created
+      trackFunnelStep('subscription', 2, 'order_created');
 
       // Razorpay options
       const options = {
@@ -113,10 +132,12 @@ const Pricing = () => {
           color: '#8B5CF6',
         },
         handler: async (response: any) => {
-          await verifyPayment(response);
+          trackFunnelStep('subscription', 3, 'payment_submitted');
+          await verifyPayment(response, planType, order.razorpay_amount / 100);
         },
         modal: {
           ondismiss: () => {
+            trackFunnelStep('subscription', 0, 'payment_cancelled');
             setProcessingPlan(null);
             toast({
               title: 'Payment Cancelled',
@@ -129,17 +150,18 @@ const Pricing = () => {
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error: any) {
-      console.error('Checkout error:', error);
+      log.error('Checkout error', { error: error.message });
       toast({
         title: 'Error',
         description: error.message || 'Failed to initiate payment',
         variant: 'destructive',
       });
+      trackPaymentFailed(error.message || 'checkout_error');
       setProcessingPlan(null);
     }
   };
 
-  const verifyPayment = async (razorpayResponse: any) => {
+  const verifyPayment = async (razorpayResponse: any, planType: string, amountInRupees: number) => {
     try {
       const response = await paymentAPI.verifyPayment({
         razorpay_order_id: razorpayResponse.razorpay_order_id,
@@ -148,6 +170,11 @@ const Pricing = () => {
       });
 
       if (response.data.verified) {
+        // Track successful payment
+        trackFunnelStep('subscription', 4, 'payment_verified');
+        trackSubscriptionStarted(planType, amountInRupees);
+        trackConversion('subscription_purchase', amountInRupees);
+        
         // Trigger subscription update
         window.dispatchEvent(new Event('subscription-updated'));
 
@@ -163,7 +190,8 @@ const Pricing = () => {
         throw new Error('Payment verification failed');
       }
     } catch (error: any) {
-      console.error('Verification error:', error);
+      log.error('Verification error', { error: error.message });
+      trackPaymentFailed('verification_failed');
       toast({
         title: 'Verification Failed',
         description: 'Payment verification failed. Please contact support.',
@@ -194,13 +222,15 @@ const Pricing = () => {
   const monthly = pricing?.pricing?.find((p) => p.product_key === 'monthly_subscription');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse-glow" />
-      </div>
+    <>
+      <PageSEO page="pricing" />
+      <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse-glow" />
+        </div>
 
-      <div className="container mx-auto px-4 py-12 relative z-10">
+        <div className="container mx-auto px-4 py-12 relative z-10">
         {/* Header with Logo and Theme Toggle */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
@@ -228,44 +258,44 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12 items-start">
           {/* Free Plan */}
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm hover:border-border transition-all duration-300">
             <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Free Trial</CardTitle>
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <Sparkles className="h-6 w-6 text-muted-foreground" />
               </div>
-              <div className="text-3xl font-bold">
+              <CardTitle className="text-xl">Free Trial</CardTitle>
+              <div className="text-4xl font-bold mt-2">
                 {pricing?.currency} 0
-                <span className="text-sm font-normal text-muted-foreground ml-2">/ forever</span>
               </div>
-              <CardDescription>Perfect for trying out AstroLord</CardDescription>
+              <p className="text-sm text-muted-foreground">Forever free</p>
+              <CardDescription className="mt-2">Perfect for trying out AstroLord</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
                   <span className="text-sm">{freePlan?.quotas.charts || 2} Birth Charts</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
                   <span className="text-sm">
                     {freePlan?.quotas.messages_daily || 25} AI Messages per Day
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
                   <span className="text-sm">
                     {freePlan?.quotas.messages_hourly || 10} Messages per Hour
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-green-500 shrink-0" />
                   <span className="text-sm">All Basic Features</span>
                 </li>
               </ul>
-              <Button onClick={() => navigate('/register')} variant="outline" className="w-full">
+              <Button onClick={() => navigate('/register')} variant="outline" className="w-full transition-transform hover:scale-[1.02] active:scale-[0.98]">
                 Get Started Free
               </Button>
             </CardContent>
@@ -273,22 +303,20 @@ const Pricing = () => {
 
           {/* Weekly Plan */}
           {weekly && (
-            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <Card className="border-secondary/50 bg-gradient-to-br from-secondary/5 to-card/50 backdrop-blur-sm hover:border-secondary/70 hover:shadow-lg hover:shadow-secondary/10 transition-all duration-300">
               <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-blue-500" />
-                  <CardTitle>Weekly Pass</CardTitle>
+                <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+                  <Zap className="h-6 w-6 text-secondary" />
                 </div>
-                <div className="text-3xl font-bold">
+                <CardTitle className="text-xl">Weekly Pass</CardTitle>
+                <div className="text-4xl font-bold mt-2">
                   {getCurrencySymbol(pricing?.currency || 'USD')}
                   {weekly.final_price.toFixed(2)}
-                  <span className="text-sm font-normal text-muted-foreground ml-2">/ week</span>
                 </div>
+                <p className="text-sm text-muted-foreground">per week</p>
                 {weekly.tax_amount > 0 && (
-                  <CardDescription>
-                    {getCurrencySymbol(pricing?.currency || 'USD')}
-                    {weekly.local_price_before_tax.toFixed(2)} +{' '}
-                    {getCurrencySymbol(pricing?.currency || 'USD')}
+                  <CardDescription className="mt-1">
+                    Incl. {getCurrencySymbol(pricing?.currency || 'USD')}
                     {weekly.tax_amount.toFixed(2)} tax
                   </CardDescription>
                 )}
@@ -296,99 +324,101 @@ const Pricing = () => {
               <CardContent>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
+                    <Check className="h-4 w-4 text-green-500 shrink-0" />
                     <span className="text-sm">
                       {weeklyQuota?.quotas.charts || 5} Charts per Week
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
+                    <Check className="h-4 w-4 text-green-500 shrink-0" />
                     <span className="text-sm">
                       {weeklyQuota?.quotas.messages_daily || 200} Messages per Day
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">No Hourly/Daily Limits</span>
+                    <Check className="h-4 w-4 text-green-500 shrink-0" />
+                    <span className="text-sm">No Hourly Limits</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
+                    <Check className="h-4 w-4 text-green-500 shrink-0" />
                     <span className="text-sm">All Premium Features</span>
                   </li>
                 </ul>
                 <Button
                   disabled
-                  className="w-full bg-gradient-to-r from-primary to-secondary opacity-70 cursor-not-allowed"
+                  className="w-full bg-secondary/20 text-secondary border border-secondary/30 cursor-not-allowed"
                 >
-                  🚀 Coming Soon
+                  <Clock className="h-4 w-4 mr-2" /> Coming Soon
                 </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Payments launching soon!
-                </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Monthly Plan */}
+          {/* Monthly Plan - FEATURED */}
           {monthly && (
-            <Card className="border-primary/50 bg-card/50 backdrop-blur-sm border-2 relative">
-              <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-secondary">
-                MOST POPULAR
-              </Badge>
-              <CardHeader>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <CardTitle>Monthly Pass</CardTitle>
+            <Card className="border-accent border-2 bg-gradient-to-br from-accent/10 via-primary/5 to-card/50 backdrop-blur-sm relative md:scale-105 md:-translate-y-2 shadow-2xl shadow-accent/20 hover:shadow-accent/30 transition-all duration-300">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <Badge className="bg-gradient-to-r from-accent to-primary text-black font-bold px-4 py-1 shadow-lg">
+                  ⭐ RECOMMENDED
+                </Badge>
+              </div>
+              <CardHeader className="pt-8">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center mb-4 mx-auto ring-4 ring-accent/20">
+                  <Sparkles className="h-7 w-7 text-accent" />
                 </div>
-                <div className="text-3xl font-bold">
+                <CardTitle className="text-2xl text-center">Monthly Pass</CardTitle>
+                <div className="text-5xl font-bold mt-2 text-center bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
                   {getCurrencySymbol(pricing?.currency || 'USD')}
                   {monthly.final_price.toFixed(2)}
-                  <span className="text-sm font-normal text-muted-foreground ml-2">/ month</span>
                 </div>
+                <p className="text-sm text-muted-foreground text-center">per month</p>
                 {monthly.tax_amount > 0 && (
-                  <CardDescription>
-                    {getCurrencySymbol(pricing?.currency || 'USD')}
-                    {monthly.local_price_before_tax.toFixed(2)} +{' '}
-                    {getCurrencySymbol(pricing?.currency || 'USD')}
+                  <CardDescription className="mt-1 text-center">
+                    Incl. {getCurrencySymbol(pricing?.currency || 'USD')}
                     {monthly.tax_amount.toFixed(2)} tax
                   </CardDescription>
                 )}
+                <div className="flex justify-center mt-2">
+                  <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                    Save 28% vs weekly
+                  </span>
+                </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">
+                    <Check className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-medium">
                       {monthlyQuota?.quotas.charts || 25} Charts per Month
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">
+                    <Check className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-medium">
                       {monthlyQuota?.quotas.messages_daily || 1000} Messages per Day
                     </span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">No Hourly/Daily Limits</span>
+                    <Check className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-medium">Unlimited Hourly Messages</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Priority Support</span>
+                    <Check className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-medium">Priority Support</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-sm font-semibold">Best Value!</span>
+                    <Check className="h-4 w-4 text-accent shrink-0" />
+                    <span className="text-sm font-bold text-accent">Best Value!</span>
                   </li>
                 </ul>
                 <Button
                   disabled
-                  className="w-full bg-gradient-to-r from-primary to-secondary opacity-70 cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-accent to-primary text-black font-semibold cursor-not-allowed opacity-80"
                 >
                   <Rocket className="h-4 w-4 mr-2" /> Coming Soon
                 </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Payments launching soon!
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  🔔 Get notified when payments launch
                 </p>
               </CardContent>
             </Card>
@@ -481,9 +511,10 @@ const Pricing = () => {
               ))}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

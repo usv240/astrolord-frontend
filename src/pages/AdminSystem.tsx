@@ -4,6 +4,9 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import { AlertCircle, Activity, HardDrive, Zap } from 'lucide-react';
 import adminAPI from '@/lib/adminAPI';
 import AdminLayout from '@/components/AdminLayout';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AdminSystem');
 
 interface SystemHealth {
   status: string;
@@ -131,7 +134,7 @@ export default function AdminSystemPage() {
       const res = await adminAPI.getSystemHealth();
       setSystemHealth(res.data);
     } catch (err: any) {
-      console.error('System health error:', err);
+      log.error('System health error', { error: err.message });
       setError(err.message || 'Failed to load system health');
     } finally {
       setLoading(false);

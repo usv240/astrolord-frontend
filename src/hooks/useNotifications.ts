@@ -8,6 +8,9 @@ import { notificationAPI } from '@/lib/api';
 import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { trackNotificationEnabled, trackNotificationDisabled } from '@/lib/analytics';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('useNotifications');
 
 export interface NotificationPreferences {
     enabled: boolean;
@@ -55,7 +58,7 @@ export function useNotifications() {
                 setPreferences(response.data.preferences);
             }
         } catch (error) {
-            console.error('Failed to load notification preferences:', error);
+            log.error('Failed to load notification preferences', { error: String(error) });
         }
     }, []);
 
@@ -126,7 +129,7 @@ export function useNotifications() {
                 return false;
             }
         } catch (error) {
-            console.error('Error requesting notification permission:', error);
+            log.error('Error requesting notification permission', { error: String(error) });
             toast.error('Failed to enable notifications');
             return false;
         } finally {
@@ -142,7 +145,7 @@ export function useNotifications() {
             setPreferences(prev => ({ ...prev, ...newPrefs }));
             toast.success('Preferences updated');
         } catch (error) {
-            console.error('Failed to update preferences:', error);
+            log.error('Failed to update preferences', { error: String(error) });
             toast.error('Failed to update preferences');
         } finally {
             setIsLoading(false);
@@ -162,7 +165,7 @@ export function useNotifications() {
             trackNotificationDisabled();
             toast.success('Notifications disabled');
         } catch (error) {
-            console.error('Failed to disable notifications:', error);
+            log.error('Failed to disable notifications', { error: String(error) });
             toast.error('Failed to disable notifications');
         } finally {
             setIsLoading(false);
@@ -182,7 +185,7 @@ export function useNotifications() {
                 });
             }
         } catch (error) {
-            console.error('Failed to send test notification:', error);
+            log.error('Failed to send test notification', { error: String(error) });
             toast.error('Failed to generate test notification');
         } finally {
             setIsLoading(false);

@@ -8,6 +8,9 @@ import { Star, Send, Sparkles, Heart, Check, ArrowLeft, MessageSquare, Zap, Targ
 import { feedbackAPI, api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('FeedbackPage');
 
 const CATEGORIES = [
     { id: 'general', label: 'General', icon: MessageSquare, color: 'text-blue-500' },
@@ -40,7 +43,7 @@ const FeedbackPage = () => {
                         setTokenUser(response.data.user);
                     }
                 } catch (error) {
-                    console.error('Token validation failed:', error);
+                    log.debug('Token validation failed', { error: String(error) });
                 }
             }
             setLoading(false);

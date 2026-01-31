@@ -121,18 +121,19 @@ export const ChartSearch = ({
     <div className="space-y-4">
       {/* Search Bar */}
       <div className="flex gap-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex-1 relative group">
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200 ${searchQuery ? 'text-primary' : 'text-muted-foreground'}`} />
           <Input
             placeholder="Search by name, city, or birth date..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 border-border/50"
+            className={`pl-10 pr-10 border-border/50 transition-all duration-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 ${searchQuery ? 'border-primary/30' : ''}`}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 animate-in fade-in zoom-in-50"
+              title="Clear search"
             >
               <X className="h-4 w-4" />
             </button>
@@ -142,15 +143,16 @@ export const ChartSearch = ({
           variant={showFilters ? 'default' : 'outline'}
           size="sm"
           onClick={() => setShowFilters(!showFilters)}
-          className="border-border/50"
+          className={`border-border/50 transition-all duration-200 ${showFilters ? 'cosmic-glow' : 'hover:border-primary/50'}`}
+          title={showFilters ? 'Hide filters' : 'Show filters'}
         >
-          <SortAsc className="h-4 w-4" />
+          <SortAsc className={`h-4 w-4 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
         </Button>
       </div>
 
       {/* Advanced Filters */}
       {showFilters && (
-        <div className="bg-secondary/5 border border-secondary/30 rounded-lg p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+        <div className="bg-secondary/5 border border-secondary/30 rounded-lg p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Sort Option */}
           <div className="space-y-2">
             <label className="text-sm font-semibold">Sort By</label>
@@ -210,19 +212,21 @@ export const ChartSearch = ({
 
       {/* Results Summary */}
       {searchQuery || dateRangeStart || dateRangeEnd ? (
-        <div className="text-xs text-muted-foreground flex items-center justify-between">
+        <div className="text-xs text-muted-foreground flex items-center justify-between animate-in fade-in slide-in-from-bottom-1 duration-200">
           <span>
             Found <span className="font-semibold text-foreground">{resultCount}</span> chart
             {resultCount !== 1 ? 's' : ''}
+            {resultCount === 0 && <span className="text-yellow-500 ml-1">— try adjusting your filters</span>}
           </span>
           {hasActiveFilters && (
             <Button
               onClick={handleClearFilters}
               variant="ghost"
               size="sm"
-              className="h-auto p-0 text-xs underline"
+              className="h-auto py-1 px-2 text-xs hover:bg-destructive/10 hover:text-destructive transition-colors"
             >
-              Reset filters
+              <X className="h-3 w-3 mr-1" />
+              Reset
             </Button>
           )}
         </div>

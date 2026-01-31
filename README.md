@@ -10,6 +10,26 @@ AstroLord is a modern web application for generating Vedic astrology birth chart
 - ⏰ Analyze Vimshottari Dashas (planetary periods)
 - 🤖 Chat with AI astrologer for personalized insights
 - 💾 Save and manage multiple birth charts
+- 💕 Relationship compatibility matching
+- 📱 Mobile-optimized with bottom navigation
+- 🌙 Dark & Light theme support
+
+## Recent UI Improvements (v1.1.0)
+
+See [UI_IMPROVEMENTS.md](./UI_IMPROVEMENTS.md) for detailed documentation of the latest updates:
+
+| Feature | Description |
+|---------|-------------|
+| Mobile Bottom Nav | iOS/Android-style tab bar for mobile users |
+| Inline Chart Selector | Pick charts directly in Chat tab |
+| Loading Skeletons | Smooth loading states throughout |
+| Enhanced Pricing | Clear visual hierarchy for plan comparison |
+| Message Timestamps | Relative time display on chat messages |
+| Animated Empty States | Engaging illustrations when no data |
+| Light Mode Polish | Warmer colors with subtle gradients |
+| Contextual Feedback | Dynamic feedback modal experience |
+| Micro-Animations | Press effects, hover states, transitions |
+| Quick Action Buttons | One-tap astrological queries in chat |
 
 ## Getting Started
 
@@ -69,12 +89,21 @@ This project is built with modern web technologies:
 
 ```
 src/
-├── components/     # Reusable UI components
-├── contexts/       # React context providers
-├── hooks/          # Custom React hooks
-├── lib/            # Utility functions and API client
-├── pages/          # Page components
-└── main.tsx        # Application entry point
+├── components/           # Reusable UI components
+│   ├── ui/              # shadcn/ui base components
+│   ├── MobileBottomNav.tsx    # Mobile tab navigation
+│   ├── ChatChartSelector.tsx  # Inline chart picker
+│   ├── CentralizedChat.tsx    # Main chat component
+│   ├── DashboardHome.tsx      # Dashboard overview
+│   ├── DashboardNav.tsx       # Sidebar navigation
+│   ├── EmptyStates.tsx        # Empty state illustrations
+│   └── ...
+├── contexts/             # React context providers
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions and API client
+├── pages/                # Page components
+├── styles/               # Additional CSS
+└── main.tsx              # Application entry point
 ```
 
 ## Deployment

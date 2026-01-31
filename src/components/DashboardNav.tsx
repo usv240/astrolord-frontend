@@ -11,6 +11,7 @@ import {
   Gift,
   BarChart3,
   Timer,
+  Rocket,
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useQuota } from '@/hooks/useQuota';
@@ -47,6 +48,7 @@ export const DashboardNav = ({ activeTab, onTabChange, onLogout }: DashboardNavP
     { id: 'create', label: 'Create', icon: Plus, highlight: true },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
     { id: 'relationship', label: 'Relationship', icon: Heart },
+    { id: 'roadmap', label: 'Roadmap', icon: Rocket, isLink: true, href: '/roadmap' },
   ];
 
   const planType = subscription?.plan_type || 'free';
@@ -55,22 +57,46 @@ export const DashboardNav = ({ activeTab, onTabChange, onLogout }: DashboardNavP
   return (
     <div className="space-y-4 sticky top-4 flex flex-col h-[calc(100vh-8rem)]">
       {/* Navigation */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+
+          // Handle external links (like roadmap)
+          if (item.isLink && item.href) {
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className="w-full justify-start hover:translate-x-1 text-primary/80 hover:text-primary"
+                asChild
+              >
+                <a href={item.href}>
+                  <Icon className="h-4 w-4 mr-2 shrink-0" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">New</span>
+                </a>
+              </Button>
+            );
+          }
 
           return (
             <Button
               key={item.id}
               onClick={() => onTabChange(item.id)}
               variant={isActive ? 'default' : 'ghost'}
-              className={`w-full justify-start ${
+              className={`w-full justify-start relative transition-all duration-200 ${
                 item.highlight && !isActive ? 'border border-primary/30 hover:bg-primary/10' : ''
-              } ${isActive ? 'cosmic-glow' : ''}`}
+              } ${isActive ? 'cosmic-glow bg-primary' : 'hover:translate-x-1'}`}
             >
-              <Icon className="h-4 w-4 mr-2 shrink-0" />
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-r-full -ml-[1px]" />
+              )}
+              <Icon className={`h-4 w-4 mr-2 shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
               <span className="flex-1 text-left">{item.label}</span>
+              {item.highlight && !isActive && (
+                <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+              )}
             </Button>
           );
         })}

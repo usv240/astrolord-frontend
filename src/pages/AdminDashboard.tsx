@@ -25,6 +25,9 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AdminDashboard');
 
 interface QueryLog {
   timestamp: string;
@@ -210,7 +213,7 @@ const AdminDashboard = () => {
         const res = await adminAPI.getLiveStats();
         setLiveStats(res.data);
       } catch (error) {
-        console.error('Failed to fetch live stats:', error);
+        log.error('Failed to fetch live stats', { error: String(error) });
       }
     };
 
@@ -287,12 +290,12 @@ const AdminDashboard = () => {
       // 2. Fetch Charts (Async)
       adminAPI.getUserCharts(userId).then(resCharts => {
         setSelectedUser(prev => prev ? { ...prev, charts: resCharts.data } : null);
-      }).catch(err => console.error("Failed to load charts", err));
+      }).catch(err => log.error('Failed to load charts', { error: String(err) }));
 
       // 3. Fetch Sessions (Async)
       adminAPI.getUserSessions(userId).then(resSessions => {
         setSelectedUser(prev => prev ? { ...prev, sessions: resSessions.data } : null);
-      }).catch(err => console.error("Failed to load sessions", err));
+      }).catch(err => log.error('Failed to load sessions', { error: String(err) }));
 
     } catch (error) {
       toast({

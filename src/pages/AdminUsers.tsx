@@ -3,6 +3,9 @@ import { Search, ChevronDown, AlertCircle, Mail, Users as UsersIcon, MessageCirc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import adminAPI from '@/lib/adminAPI';
 import AdminLayout from '@/components/AdminLayout';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AdminUsers');
 
 interface User {
   id: string;
@@ -150,7 +153,7 @@ export default function AdminUsersPage() {
       // Growth chart data can be derived from analytics endpoints
       setUsersGrowthChart([]);
     } catch (err: any) {
-      console.error('Failed to load growth chart:', err);
+      log.error('Failed to load growth chart', { error: err.message });
     }
   };
 
@@ -193,7 +196,7 @@ export default function AdminUsersPage() {
 
       // Handle axios response structure - res.data is the response from backend
       const messages = res.data?.messages || [];
-      console.log('Fetched messages for session', sessionId, ':', messages);
+      log.debug('Fetched messages for session', { sessionId, messageCount: messages.length });
 
       // Update the conversation with fetched messages
       setUserConversations(prev =>
@@ -204,7 +207,7 @@ export default function AdminUsersPage() {
         )
       );
     } catch (err: any) {
-      console.error('Failed to load messages:', err);
+      log.error('Failed to load messages', { error: err.message });
       setError(err.message || 'Failed to load messages');
     } finally {
       setLoadingMessages(prev => {
@@ -233,7 +236,7 @@ export default function AdminUsersPage() {
       const res = await adminAPI.getChartSessions(selectedUser?.id!, chartId);
       setChartSessions(prev => ({ ...prev, [chartId]: res.data }));
     } catch (err: any) {
-      console.error('Failed to load chart sessions:', err);
+      log.error('Failed to load chart sessions', { error: err.message });
       setError('Failed to load chart sessions');
     } finally {
       setLoadingChartSessions(prev => {

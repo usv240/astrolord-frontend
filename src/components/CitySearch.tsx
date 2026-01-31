@@ -5,6 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('CitySearch');
 
 export interface CityResult {
   name: string;
@@ -43,7 +46,7 @@ export function CitySearch({ onSelect, className, defaultValue }: CitySearchProp
           setResults(response.data.results || []);
           setIsOpen(true);
         } catch (error) {
-          console.error('City search failed:', error);
+          log.error('City search failed', { error: String(error) });
           setResults([]);
         } finally {
           setIsLoading(false);

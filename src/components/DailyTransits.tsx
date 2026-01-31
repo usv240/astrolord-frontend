@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles } from 'lucide-react';
 import { transitsAPI } from '@/lib/api';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('DailyTransits');
 
 interface DailyTransitsProps {
   chartId?: string;
@@ -22,7 +25,7 @@ const DailyTransits = ({ chartId }: DailyTransitsProps) => {
         const res = await transitsAPI.getDailyTransits(chartId);
         setTransits(res.data);
       } catch (err) {
-        console.error("Failed to fetch transits", err);
+        log.error('Failed to fetch transits', { error: String(err) });
         setError("Unable to load transits.");
       } finally {
         setLoading(false);

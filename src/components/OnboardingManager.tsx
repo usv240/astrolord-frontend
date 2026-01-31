@@ -4,6 +4,9 @@ import { OnboardingWelcome } from './OnboardingWelcome';
 import { OnboardingTutorial, OnboardingStep } from './OnboardingTutorial';
 import { NotificationPrompt } from './NotificationPrompt';
 import { authAPI } from '@/lib/api';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('OnboardingManager');
 
 interface OnboardingManagerProps {
   onComplete?: () => void;
@@ -153,6 +156,13 @@ export const OnboardingManager = ({
     }
   };
 
+  const handleGoToStep = (step: number) => {
+    if (step >= 0 && step < ONBOARDING_STEPS.length) {
+      setTutorialStep(step);
+      trackOnboardingEvent('tutorial_step_jump', { from: tutorialStep, to: step });
+    }
+  };
+
   const handleCompleteTutorial = () => {
     // Show notification prompt after tutorial completion
     setShowTutorial(false);
@@ -188,7 +198,7 @@ export const OnboardingManager = ({
     try {
       await authAPI.completeOnboarding();
     } catch (error) {
-      console.warn('Failed to sync onboarding status to backend:', error);
+      log.warn('Failed to sync onboarding status to backend', { error: String(error) });
       // Don't block the UI - localStorage is already set
     }
 
@@ -234,6 +244,7 @@ export const OnboardingManager = ({
           onPrevious={handlePreviousStep}
           onComplete={handleCompleteTutorial}
           onSkip={handleSkipTutorial}
+          onGoToStep={handleGoToStep}
         />
       )}
 

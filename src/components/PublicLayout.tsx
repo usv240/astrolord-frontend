@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Footer } from '@/components/Footer';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Rocket } from 'lucide-react';
 
 export default function PublicLayout() {
   const location = useLocation();
@@ -10,6 +10,7 @@ export default function PublicLayout() {
     { label: 'Pricing', href: '/pricing' },
     { label: 'FAQ', href: '/faq' },
     { label: 'Blog', href: '/blog' },
+    { label: 'Roadmap', href: '/roadmap', highlight: true },
     { label: 'Contact', href: '/contact' },
   ];
 
@@ -36,12 +37,13 @@ export default function PublicLayout() {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`transition-colors ${
+                className={`transition-colors flex items-center gap-1 ${
                   isActive(item.href)
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                } ${item.highlight ? 'text-primary font-medium' : ''}`}
               >
+                {item.highlight && <Rocket className="h-3 w-3" />}
                 {item.label}
               </Link>
             ))}

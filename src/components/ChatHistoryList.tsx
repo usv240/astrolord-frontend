@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { MessageSquare, Trash2, Edit2, History, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('ChatHistoryList');
 
 interface Session {
   id: string;
@@ -36,7 +39,7 @@ export function ChatHistoryList({ onSelectSession, currentSessionId }: ChatHisto
       const response = await aiAPI.listSessions();
       setSessions(response.data);
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
+      log.error('Failed to fetch sessions', { error: String(error) });
       toast.error('Failed to load chat history');
     } finally {
       setIsLoading(false);
@@ -58,7 +61,7 @@ export function ChatHistoryList({ onSelectSession, currentSessionId }: ChatHisto
       setIsRenameDialogOpen(false);
       toast.success('Session renamed');
     } catch (error) {
-      console.error('Failed to rename session:', error);
+      log.error('Failed to rename session', { error: String(error) });
       toast.error('Failed to rename session');
     }
   };
@@ -71,7 +74,7 @@ export function ChatHistoryList({ onSelectSession, currentSessionId }: ChatHisto
       setSessions(sessions.filter(s => s.id !== sessionId));
       toast.success('Chat moved to trash');
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      log.error('Failed to delete session', { error: String(error) });
       toast.error('Failed to delete session');
     }
   };

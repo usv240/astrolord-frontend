@@ -28,10 +28,10 @@ export const initializeGA = (measurementId: string) => {
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
     script.onload = () => {
-      console.log('Google Analytics script loaded successfully');
+      // GA script loaded - no logging needed
     };
     script.onerror = () => {
-      console.error('Failed to load Google Analytics script');
+      // GA script failed to load - silent fail (ad blocker, etc.)
     };
     document.head.appendChild(script);
 
@@ -51,9 +51,12 @@ export const initializeGA = (measurementId: string) => {
     // Track initial page view
     trackPageView(window.location.pathname, document.title);
     
-    console.log('Google Analytics initialized with ID:', measurementId);
-  } catch (error) {
-    console.error('Error initializing Google Analytics:', error);
+    // GA initialized - use debug if needed
+    if (import.meta.env.DEV) {
+      console.debug('[Analytics] GA initialized with ID:', measurementId);
+    }
+  } catch {
+    // Silent fail for GA initialization errors
   }
 };
 

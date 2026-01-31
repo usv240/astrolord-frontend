@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ChevronRight, Check, AlertCircle } from 'lucide-react';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export interface OnboardingStep {
   step: number;
@@ -20,6 +21,7 @@ interface OnboardingTutorialProps {
   onPrevious: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  onGoToStep?: (step: number) => void;
 }
 
 export const OnboardingTutorial = ({
@@ -29,18 +31,38 @@ export const OnboardingTutorial = ({
   onPrevious,
   onComplete,
   onSkip,
+  onGoToStep,
 }: OnboardingTutorialProps) => {
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+
+  const step = steps[currentStep];
+  const progress = ((currentStep + 1) / steps.length) * 100;
+  const isLastStep = currentStep === steps.length - 1;
+
+  // Keyboard shortcuts for navigation
+  const handleNextOrComplete = useCallback(() => {
+    if (isLastStep) {
+      onComplete();
+    } else {
+      onNext();
+    }
+  }, [isLastStep, onComplete, onNext]);
+
+  useKeyboardShortcuts({
+    shortcuts: [
+      { key: 'Escape', handler: onSkip, description: 'Skip tutorial' },
+      { key: 'ArrowRight', handler: onNext, description: 'Next step' },
+      { key: 'ArrowLeft', handler: onPrevious, description: 'Previous step' },
+      { key: 'Enter', handler: handleNextOrComplete, description: 'Continue/Complete' },
+    ],
+    enabled: true,
+  });
 
   useEffect(() => {
     // Auto-scroll content on step change
     const timer = setTimeout(() => setIsAutoScrolling(true), 300);
     return () => clearTimeout(timer);
   }, [currentStep]);
-
-  const step = steps[currentStep];
-  const progress = ((currentStep + 1) / steps.length) * 100;
-  const isLastStep = currentStep === steps.length - 1;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -168,19 +190,21 @@ export const OnboardingTutorial = ({
             )}
           </div>
 
-          {/* Step indicators */}
+          {/* Step indicators - Clickable */}
           <div className="flex justify-center gap-2">
             {steps.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => { }} // Navigation between steps via buttons above
-                className={`h-2 rounded-full transition-all ${idx === currentStep
+                onClick={() => onGoToStep?.(idx)}
+                className={`h-2 rounded-full transition-all duration-200 hover:opacity-80 ${
+                  idx === currentStep
                     ? 'bg-primary w-6'
                     : idx < currentStep
-                      ? 'bg-primary/50 w-2'
-                      : 'bg-border w-2'
-                  }`}
-                aria-label={`Step ${idx + 1}`}
+                      ? 'bg-primary/50 w-2 hover:bg-primary/70 cursor-pointer'
+                      : 'bg-border w-2 hover:bg-muted-foreground/50 cursor-pointer'
+                }`}
+                aria-label={`Go to step ${idx + 1}`}
+                title={`Step ${idx + 1}: ${steps[idx]?.title}`}
               />
             ))}
           </div>

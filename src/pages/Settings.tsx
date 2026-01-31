@@ -20,10 +20,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Trash2, Lock, User, RotateCcw, Ticket, Bell, BellOff, Send, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Lock, User, RotateCcw, Ticket, Bell, BellOff, Send, Loader2, CheckCircle2, XCircle, AlertCircle, Eye, EyeOff, Home, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { showTutorialDirectly } from '@/components/OnboardingManager';
 import { PromoCodeInput } from '@/components/PromoCodeInput';
 import { useNotifications } from '@/hooks/useNotifications';
+import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
+import { getErrorMessage } from '@/utils/errorHelpers';
 
 const Settings = () => {
   const { user, logout } = useAuth();
@@ -64,7 +66,7 @@ const Settings = () => {
       // Ideally update context user here, but a refresh works for now
       window.location.reload();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to update profile');
+      toast.error(getErrorMessage(error, 'Failed to update profile'));
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +86,7 @@ const Settings = () => {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to change password');
+      toast.error(getErrorMessage(error, 'Failed to change password'));
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +100,7 @@ const Settings = () => {
       navigate('/');
       toast.success('Account deleted successfully');
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to delete account');
+      toast.error(getErrorMessage(error, 'Failed to delete account'));
       setIsLoading(false);
     }
   };
@@ -120,7 +122,7 @@ const Settings = () => {
   const statusUI = getPermissionStatusUI();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark p-4 md:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark p-4 md:p-8 pb-24 lg:pb-8">
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
@@ -428,7 +430,7 @@ const Settings = () => {
                           {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+                      <PasswordStrengthIndicator password={newPassword} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirm">Confirm New Password</Label>
@@ -566,6 +568,33 @@ const Settings = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-lg border-t border-border/50 flex justify-around items-center py-3 px-4 lg:hidden z-50">
+        <Button
+          variant="ghost"
+          className="flex flex-col items-center gap-1 h-auto py-2 px-4"
+          onClick={() => navigate('/dashboard')}
+        >
+          <Home className="h-5 w-5" />
+          <span className="text-[10px]">Dashboard</span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex flex-col items-center gap-1 h-auto py-2 px-4 text-primary"
+        >
+          <SettingsIcon className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Settings</span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="flex flex-col items-center gap-1 h-auto py-2 px-4 text-destructive"
+          onClick={logout}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="text-[10px]">Logout</span>
+        </Button>
+      </nav>
     </div>
   );
 };

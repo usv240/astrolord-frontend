@@ -30,6 +30,9 @@ import { authenticatedApi } from '@/lib/api';
 import { paymentAPI } from '@/lib/payment-api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('PDFReportCard');
 
 interface ReportPreview {
   chart_id: string;
@@ -119,11 +122,11 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
         setPurchase(existingPurchase || null);
       } catch (purchaseErr: any) {
         // If can't fetch purchases, that's OK - just no existing purchase
-        console.warn('Could not fetch existing purchases');
+        log.debug('Could not fetch existing purchases');
         setPurchase(null);
       }
     } catch (error: any) {
-      console.error('Error loading report info:', error);
+      log.error('Error loading report info', { error: error.message });
       const errorMsg = error.response?.data?.detail || 'Failed to load report information';
       setError(errorMsg);
       toast({
@@ -148,7 +151,7 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
         });
       } else {
         // Fallback pricing if product not found
-        console.warn('Report product not found in pricing list, using default');
+        log.warn('Report product not found in pricing list, using default');
         setPricing({
           product_key: 'one_time_report',
           amount: 299, // $2.99 default
@@ -157,7 +160,7 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
         });
       }
     } catch (error) {
-      console.error('Error loading pricing:', error);
+      log.error('Error loading pricing', { error: String(error) });
       // Use fallback pricing instead of showing error
       setPricing({
         product_key: 'one_time_report',
@@ -238,7 +241,7 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error: any) {
-      console.error('Purchase error:', error);
+      log.error('Purchase error', { error: error.message });
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -284,7 +287,7 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
       // Reload to update generation count
       await loadReportInfo();
     } catch (error: any) {
-      console.error('Download error:', error);
+      log.error('Download error', { error: error.message });
       toast({
         variant: 'destructive',
         title: 'Download Failed',
@@ -640,7 +643,7 @@ export function PDFReportCard({ chartId, chartName }: PDFReportCardProps) {
                     description: 'Check your downloads folder',
                   });
                 } catch (err: any) {
-                  console.error('Test PDF error:', err);
+                  log.error('Test PDF error', { error: err.message });
                   toast({
                     variant: 'destructive',
                     title: 'PDF Generation Failed',

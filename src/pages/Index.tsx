@@ -19,8 +19,10 @@ import { usePricing } from '@/hooks/use-pricing';
 import { useQuotaPlans } from '@/hooks/useQuotaPlans';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { PageSEO } from '@/components/SEO';
+import { memo } from 'react';
 
-const Index = () => {
+const Index = memo(() => {
   const { user } = useAuth();
   const { pricing, isLoading: pricingLoading } = usePricing();
   const {
@@ -50,8 +52,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <>
+      <PageSEO page="home" />
+      <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
         <div className="absolute bottom-1/4 right-1/3 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse-glow" />
         <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-float" />
@@ -62,7 +66,7 @@ const Index = () => {
           <nav className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Link to="/" className="hover:opacity-80 transition-opacity">
-                <img src="/logo.png" alt="AstroLord" className="h-16 w-auto" />
+                <img src="/logo.png" alt="AstroLord" className="h-16 w-auto" loading="eager" width="64" height="64" />
               </Link>
             </div>
             <div className="flex gap-3">
@@ -97,7 +101,7 @@ const Index = () => {
         <main className="container mx-auto px-4 py-20">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <div className="flex justify-center mb-8">
-              <img src="/logo.png" alt="AstroLord" className="h-48 w-auto animate-float" />
+              <img src="/logo.png" alt="AstroLord" className="h-48 w-auto animate-float" width="192" height="192" loading="eager" />
             </div>
 
             <h1 className="text-5xl md:text-7xl font-bold leading-tight">
@@ -135,6 +139,20 @@ const Index = () => {
               <Button asChild size="lg" variant="outline" className="text-lg px-8 border-border/50">
                 <Link to="/login">Sign In</Link>
               </Button>
+            </div>
+
+            {/* Roadmap Banner */}
+            <div className="pt-6">
+              <Link 
+                to="/roadmap" 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 hover:border-purple-500/50 transition-all group"
+              >
+                <span className="text-[10px] uppercase tracking-wider font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded-full">New</span>
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                  Check out our upcoming features
+                </span>
+                <span className="text-primary group-hover:translate-x-1 transition-transform">→</span>
+              </Link>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 pt-16">
@@ -459,8 +477,11 @@ const Index = () => {
           </div>
         </main>
       </div>
-    </div>
+      </div>
+    </>
   );
-};
+});
+
+Index.displayName = 'Index';
 
 export default Index;

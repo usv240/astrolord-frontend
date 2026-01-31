@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { aiAPI, transitsAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useQuota } from '@/hooks/useQuota';
+import { useRateLimit, handleRateLimitError } from '@/hooks/useRateLimit';
 import CentralizedChat, { type ChatMessage } from './CentralizedChat';
 import { Star, Moon, ArrowLeft } from 'lucide-react';
 import {
@@ -12,6 +13,9 @@ import {
   trackChatStarted,
   trackTransitsViewed,
 } from '@/lib/analytics';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AIChat');
 
 interface AIChatProps {
   chartId?: string;
@@ -21,23 +25,24 @@ interface AIChatProps {
   onBack?: () => void;
 }
 
-const SUGGESTED_QUESTIONS = [
+// Move constants OUTSIDE component to prevent recreation on every render
+const SUGGESTED_QUESTIONS = Object.freeze([
   'What does this chart say about career?',
   'Are there any strong yogas for wealth?',
   'What is the current Dasha indicating?',
   'Tell me about relationships in this chart.',
   'What are the strengths and weaknesses?',
-];
+] as const);
 
-const DAILY_SUGGESTED_QUESTIONS = [
+const DAILY_SUGGESTED_QUESTIONS = Object.freeze([
   'How will today go for me?',
   'Any challenges I should be aware of today?',
   'Is this a good time for new beginnings?',
   "What is the Moon's influence today?",
   'Focus areas for today?',
-];
+] as const);
 
-const FOCUS_MODES = [
+const FOCUS_MODES = Object.freeze([
   { id: 'general', label: 'General', color: 'hover:bg-slate-500/20 border-slate-500/50' },
   { id: 'career', label: 'Career', color: 'hover:bg-blue-500/20 border-blue-500/50' },
   { id: 'wealth', label: 'Wealth', color: 'hover:bg-amber-500/20 border-amber-500/50' },
@@ -48,102 +53,123 @@ const FOCUS_MODES = [
   { id: 'travel', label: 'Travel', color: 'hover:bg-cyan-500/20 border-cyan-500/50' },
   { id: 'remedies', label: 'Remedies', color: 'hover:bg-purple-500/20 border-purple-500/50' },
   { id: 'learning', label: 'Learn Your Chart', color: 'hover:bg-green-500/20 border-green-500/50' },
-];
+] as const);
 
-// Generate contextual suggestions based on response content and user intent
-const generateContextualSuggestions = (content: string, focusMode?: string): string[] => {
+// Pre-compiled regex patterns for better performance
+const PATTERNS = {
+  analysis: /<analysis>[\s\S]*?<\/analysis>/gi,
+  response: /<\/?response>/gi,
+  jsonSuggestions: /```json\s*(\{\s*"suggestions":\s*\[.*?\]\s*\})\s*```/s,
+  jsonBlock: /```json[\s\S]*?```/g,
+  analysisCapture: /<analysis>([\s\S]*?)<\/analysis>/i,
+  career: /career|job|work|profession|promotion|employment/i,
+  relationship: /relationship|marriage|love|partner|family|spouse/i,
+  wealth: /wealth|money|finance|income|business|profit/i,
+  health: /health|wellness|fitness|vitality|disease/i,
+  dasha: /dasha|period|timing|upcoming|current/i,
+} as const;
+
+// Generate contextual suggestions - moved outside component
+const generateContextualSuggestions = (content: string): string[] => {
   const suggestions: string[] = [];
 
-  // Check content for key topics
-  const hasCareertalk = /career|job|work|profession|promotion|employment/i.test(content);
-  const hasRelationship = /relationship|marriage|love|partner|family|spouse/i.test(content);
-  const hasWealth = /wealth|money|finance|income|business|profit/i.test(content);
-  const hasHealth = /health|wellness|fitness|vitality|disease/i.test(content);
-  const hasQuestion = /\?/.test(content);
-  const hasDasha = /dasha|period|timing|upcoming|current/i.test(content);
+  const hasCareertalk = PATTERNS.career.test(content);
+  const hasRelationship = PATTERNS.relationship.test(content);
+  const hasWealth = PATTERNS.wealth.test(content);
+  const hasHealth = PATTERNS.health.test(content);
+  const hasDasha = PATTERNS.dasha.test(content);
 
-  // Generate relevant follow-ups
   if (hasCareertalk) {
-    suggestions.push('Tell me more about my career path');
-    suggestions.push('What about financial potential?');
+    suggestions.push('Tell me more about my career path', 'What about financial potential?');
   }
   if (hasRelationship) {
-    suggestions.push('When will I meet someone special?');
-    suggestions.push('What about my family dynamics?');
+    suggestions.push('When will I meet someone special?', 'What about my family dynamics?');
   }
   if (hasWealth) {
-    suggestions.push('What are the best timing periods?');
-    suggestions.push('Any remedies I should know about?');
+    suggestions.push('What are the best timing periods?', 'Any remedies I should know about?');
   }
   if (hasHealth) {
-    suggestions.push('How can I improve my wellness?');
-    suggestions.push('What about my energy levels?');
+    suggestions.push('How can I improve my wellness?', 'What about my energy levels?');
   }
   if (hasDasha && !hasCareertalk && !hasRelationship) {
-    suggestions.push('What does this period mean for my career?');
-    suggestions.push('How will this affect my relationships?');
+    suggestions.push('What does this period mean for my career?', 'How will this affect my relationships?');
   }
 
-  // Default suggestions if nothing matched
   if (suggestions.length === 0) {
-    suggestions.push('Tell me more about my chart');
-    suggestions.push('What about my future timing?');
-    suggestions.push('Suggest some remedies');
+    return ['Tell me more about my chart', 'What about my future timing?', 'Suggest some remedies'];
   }
 
-  // Return top 3 suggestions
   return suggestions.slice(0, 3);
 };
 
-const processMessageContent = (
-  content: string,
-  focusMode?: string,
-): { cleanContent: string; suggestions?: string[] } => {
-  let cleanContent = content;
+// Process message content - moved outside component
+const processMessageContent = (content: string): { cleanContent: string; suggestions?: string[] } => {
+  let cleanContent = content
+    .replace(PATTERNS.analysis, '')
+    .replace(PATTERNS.response, '')
+    .trim();
+
   let suggestions: string[] | undefined;
+  const jsonMatch = cleanContent.match(PATTERNS.jsonSuggestions);
 
-  // Remove <analysis> tags if present (including content)
-  cleanContent = cleanContent.replace(/<analysis>[\s\S]*?<\/analysis>/gi, '').trim();
-
-  // Remove <response> tags if present
-  cleanContent = cleanContent.replace(/<\/?response>/gi, '').trim();
-
-  // Look for JSON block with suggestions - Updated to be more flexible with whitespace
-  const jsonMatch = cleanContent.match(/```json\s*(\{\s*"suggestions":\s*\[.*?\]\s*\})\s*```/s);
-
-  if (jsonMatch && jsonMatch[1]) {
+  if (jsonMatch?.[1]) {
     try {
       const parsed = JSON.parse(jsonMatch[1]);
-      if (parsed.suggestions && Array.isArray(parsed.suggestions)) {
+      if (Array.isArray(parsed.suggestions)) {
         suggestions = parsed.suggestions;
-        // Remove the JSON block from content
-        cleanContent = cleanContent.replace(/```json[\s\S]*?```/g, '').trim();
       }
-    } catch (e) {
-      // Fall back to removing the JSON block anyway
-      cleanContent = cleanContent.replace(/```json[\s\S]*?```/g, '').trim();
+    } catch {
+      // Ignore parse errors
     }
+    cleanContent = cleanContent.replace(PATTERNS.jsonBlock, '').trim();
   }
 
-  // If no suggestions found, generate contextual ones
-  if (!suggestions || suggestions.length === 0) {
-    suggestions = generateContextualSuggestions(cleanContent, focusMode);
+  if (!suggestions?.length) {
+    suggestions = generateContextualSuggestions(cleanContent);
   }
 
-  // Deduplicate suggestions (remove exact duplicates while preserving order)
-  if (suggestions && suggestions.length > 0) {
-    const seen = new Set<string>();
-    suggestions = suggestions.filter((s) => {
-      if (seen.has(s)) return false;
-      seen.add(s);
-      return true;
-    });
-  }
+  // Deduplicate
+  suggestions = [...new Set(suggestions)];
 
   return { cleanContent, suggestions };
 };
 
-const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack }: AIChatProps) => {
+// Memoized Transit Card component
+const TransitCard = memo(({ transit }: { transit: { planet: string; transit_sign: string; house_from_moon: number } }) => (
+  <div className="flex-shrink-0 bg-muted/50 border border-border/50 rounded px-3 py-2 text-xs min-w-[120px]">
+    <div className="font-semibold text-foreground">{transit.planet}</div>
+    <div className="text-muted-foreground">{transit.transit_sign}</div>
+    <div className="text-[10px] text-muted-foreground/70 mt-1">{transit.house_from_moon}th House</div>
+  </div>
+));
+TransitCard.displayName = 'TransitCard';
+
+// Memoized Focus Mode Button
+const FocusModeButton = memo(({ 
+  focusModeItem, 
+  isActive, 
+  onClick 
+}: { 
+  focusModeItem: typeof FOCUS_MODES[number]; 
+  isActive: boolean; 
+  onClick: () => void;
+}) => (
+  <Button
+    variant="outline"
+    size="sm"
+    className={`text-xs h-7 border transition-all duration-200 ${focusModeItem.color} ${
+      isActive
+        ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+        : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
+    }`}
+    onClick={onClick}
+  >
+    {focusModeItem.label}
+  </Button>
+));
+FocusModeButton.displayName = 'FocusModeButton';
+
+const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack }: AIChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -156,8 +182,18 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
 
   // Get quota hook for updating usage after chat
   const { refresh: fetchQuota } = useQuota();
+  
+  // Rate limiting with countdown for better UX
+  const { isRateLimited, countdownDisplay, trigger: triggerRateLimit } = useRateLimit('chat', 60000);
 
-  const activeFocusTags = FOCUS_MODES.filter((m) => m.id === focusMode);
+  // Memoize suggested questions based on mode
+  const suggestedQuestions = useMemo(
+    () => mode === 'daily' ? [...DAILY_SUGGESTED_QUESTIONS] : [...SUGGESTED_QUESTIONS],
+    [mode]
+  );
+
+  // Memoize date string for header
+  const dateStr = useMemo(() => new Date().toLocaleDateString(), []);
 
   // Initialize session based on chart and mode
   useEffect(() => {
@@ -262,11 +298,14 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
           } else {
             // Analysis Mode Initialization - Create a session first
             try {
+              log.debug('Creating session for chartId', { chartId });
               const sessionRes = await aiAPI.createSession(chartId);
+              log.debug('Session creation response', { data: sessionRes.data });
 
               if (!isMounted) return;
 
               const newSessionId = sessionRes.data.session_id;
+              log.debug('New session ID created', { newSessionId });
               if (newSessionId) {
                 setSessionId(newSessionId);
 
@@ -316,16 +355,16 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
                   })
                   .catch((historyError) => {
                     // New session, no history yet - this is fine
-                    console.debug('No history found for new session');
+                    log.debug('No history found for new session');
                   });
               }
             } catch (error) {
-              console.error('Failed to create analysis session:', error);
+              log.error('Failed to create analysis session', { error: String(error) });
               toast.error('Failed to initialize analysis session');
             }
           }
         } catch (error) {
-          console.error(error);
+          log.error('Initialization error', { error: String(error) });
           toast.error('The stars are silent right now.');
         } finally {
           setIsLoading(false);
@@ -343,7 +382,8 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
     };
   }, [chartId, mode]);
 
-  const loadMoreMessages = async () => {
+  // Memoized loadMoreMessages with useCallback
+  const loadMoreMessages = useCallback(async () => {
     if (!chartId || !sessionId || isLoadingMore) return;
 
     setIsLoadingMore(true);
@@ -356,7 +396,7 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
           .filter((m: any) => m.role !== 'system')
           .map((m: any) => {
             if (m.analysis !== undefined || m.suggestions !== undefined) {
-              const { cleanContent } = processMessageContent(m.content, focusMode);
+              const { cleanContent } = processMessageContent(m.content);
               return {
                 id: m.id,
                 role: m.role,
@@ -366,8 +406,8 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
               };
             }
 
-            const { cleanContent, suggestions } = processMessageContent(m.content, focusMode);
-            const analysisMatch = m.content.match(/<analysis>([\s\S]*?)<\/analysis>/i);
+            const { cleanContent, suggestions } = processMessageContent(m.content);
+            const analysisMatch = m.content.match(PATTERNS.analysisCapture);
             const analysis = analysisMatch ? analysisMatch[1].trim() : undefined;
 
             return {
@@ -383,34 +423,35 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
         setHasMore(newMessages.length >= 20);
       }
     } catch (error) {
-      console.error('Failed to load more messages:', error);
+      log.error('Failed to load more messages', { error: String(error) });
       toast.error('Failed to load message history');
     } finally {
       setIsLoadingMore(false);
     }
-  };
+  }, [chartId, sessionId, isLoadingMore, messages.length]);
 
   // Listen for usage updates from chat responses
   useEffect(() => {
-    const handleUsageUpdate = (event: any) => {
-      const usageData = event.detail;
-
-      // Refetch quota immediately to show updated counts
-      fetchQuota(false); // Don't show loading state, just update silently
-
-      // Store in localStorage for quick access
-      localStorage.setItem('chatUsage', JSON.stringify(usageData));
+    const handleUsageUpdate = () => {
+      fetchQuota(false);
     };
 
     window.addEventListener('chatUsageUpdated', handleUsageUpdate);
-
-    return () => {
-      window.removeEventListener('chatUsageUpdated', handleUsageUpdate);
-    };
+    return () => window.removeEventListener('chatUsageUpdated', handleUsageUpdate);
   }, [fetchQuota]);
 
-  const sendMessage = async (messageText?: string) => {
+  // Memoized sendMessage with useCallback
+  const sendMessage = useCallback(async (messageText?: string) => {
+    log.debug('sendMessage called', { chartId, sessionId, mode, messageText: messageText?.substring(0, 50) });
+    
     if (!chartId || (!messageText && !input.trim())) return;
+
+    // For analysis mode, ensure session exists
+    if (mode !== 'daily' && !sessionId) {
+      log.error('No session ID available for analysis mode', { mode, sessionId, chartId });
+      toast.error('Session not ready. Please wait a moment and try again.');
+      return;
+    }
 
     const userMessage = messageText || input;
     if (!userMessage.trim()) return;
@@ -418,6 +459,7 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
+
 
     try {
       let response;
@@ -446,7 +488,7 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
       }
 
       if (!response.data.response) {
-        console.error('[sendMessage] No response field in API response:', response.data);
+        log.error('No response field in API response', { data: response.data });
         toast.error('No response from server');
         setIsLoading(false);
         return;
@@ -505,18 +547,20 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
         ]);
       }
     } catch (error: any) {
-      console.error('[sendMessage] Error:', error);
-      if (error.response?.status === 429) {
-        toast.error("You're chatting too fast! Please wait a moment.");
+      log.error('sendMessage error', { error: error.message, status: error.response?.status });
+      
+      // Handle rate limiting with countdown
+      if (handleRateLimitError(error, triggerRateLimit)) {
+        toast.error("You're chatting too fast! Please wait before sending another message.");
       } else {
         toast.error(error.message || 'Failed to get AI response');
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [chartId, input, mode, sessionId, focusMode, fetchQuota, triggerRateLimit]);
 
-  const handleClearHistory = async () => {
+  const handleClearHistory = useCallback(async () => {
     if (sessionId) {
       try {
         await aiAPI.updateSession(sessionId, { is_deleted: true });
@@ -526,9 +570,14 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
         toast.error('Failed to clear history');
       }
     }
-  };
+  }, [sessionId]);
 
-  const headerContent =
+  const handleFocusModeChange = useCallback((modeId: string) => {
+    setFocusMode(modeId);
+    trackFocusModeUsed(modeId);
+  }, []);
+
+  const headerContent = useMemo(() =>
     mode === 'daily' ? (
       <div className="flex items-center gap-3">
         <span className="text-xs text-muted-foreground">
@@ -538,9 +587,9 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
           {new Date().toLocaleDateString()}
         </span>
       </div>
-    ) : null;
+    ) : null, [mode, moonSign]);
 
-  const focusControls =
+  const focusControls = useMemo(() =>
     mode === 'analysis' ? (
       <div className="flex flex-wrap gap-2 pt-2">
         {FOCUS_MODES.map((m) => (
@@ -552,17 +601,13 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
                 ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
                 : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
               }`}
-            onClick={() => {
-              setFocusMode(m.id);
-              // Track focus mode change
-              trackFocusModeUsed(m.id);
-            }}
+            onClick={() => handleFocusModeChange(m.id)}
           >
             {m.label}
           </Button>
         ))}
       </div>
-    ) : null;
+    ) : null, [mode, focusMode, handleFocusModeChange]);
 
   return (
     <Card className="flex flex-col h-full bg-card/30 backdrop-blur-sm border-border/40">
@@ -645,10 +690,12 @@ const AIChat = ({ chartId, onViewChart, onSwitchChart, mode = 'analysis', onBack
           }
           suggestedQuestions={mode === 'daily' ? DAILY_SUGGESTED_QUESTIONS : SUGGESTED_QUESTIONS}
           scrollHeight="h-[500px]"
+          isRateLimited={isRateLimited}
+          rateLimitCountdown={countdownDisplay}
         />
       </CardContent>
     </Card>
   );
-};
+});
 
 export default AIChat;

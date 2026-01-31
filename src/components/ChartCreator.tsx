@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { chartAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,33 +13,68 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from 'sonner';
+import { useConfetti } from './Confetti';
+import { useFormDraft } from '@/hooks/useFormDraft';
+import { getErrorMessage } from '@/utils/errorHelpers';
+import { createLogger } from '@/utils/logger';
+import { trackChartCreated, trackFormStart, trackFormSubmit } from '@/lib/analytics';
+import { AlertCircle, RotateCcw, X } from 'lucide-react';
+
+const log = createLogger('ChartCreator');
 
 interface ChartCreatorProps {
   onSuccess?: () => void;
+  onChartCreated?: (showLoading?: boolean) => Promise<void>;
 }
 
-const ChartCreator = ({ onSuccess }: ChartCreatorProps) => {
+const initialFormData = {
+  name: '',
+  gender: '',
+  dob: '',
+  time: '',
+  city: '',
+  lat: '',
+  lon: '',
+  tz: '',
+};
+
+const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [timeUnknown, setTimeUnknown] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    gender: '',
-    dob: '',
-    time: '',
-    city: '',
-    lat: '',
-    lon: '',
-    tz: '',
+  const [hasStartedForm, setHasStartedForm] = useState(false);
+  const { trigger: triggerConfetti, ConfettiComponent } = useConfetti();
+  
+  // Auto-save draft functionality
+  const {
+    data: formData,
+    setData: setFormData,
+    resetData,
+    hasDraft,
+    restoreDraft,
+    dismissDraft,
+    clearDraft,
+  } = useFormDraft({
+    key: 'chart_creator',
+    initialData: initialFormData,
+    debounceMs: 500,
+    showToasts: false, // We'll handle toasts ourselves
   });
 
+  // Track form start when user begins filling
+  const handleInputFocus = () => {
+    if (!hasStartedForm) {
+      setHasStartedForm(true);
+      trackFormStart('chart_creator');
+    }
+  };
+
   const handleCitySelect = (city: CityResult) => {
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
       city: city.city,
       lat: city.lat.toString(),
       lon: city.lon.toString(),
       tz: city.tz
-    }));
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,33 +101,78 @@ const ChartCreator = ({ onSuccess }: ChartCreatorProps) => {
       };
 
       await chartAPI.createChart(chartData);
-      toast.success('Chart created successfully!');
       
-      setFormData({
-        name: '',
-        gender: '',
-        dob: '',
-        time: '',
-        city: '',
-        lat: '',
-        lon: '',
-        tz: '',
+      // Track chart creation for analytics
+      trackChartCreated('birth_chart');
+      trackFormSubmit('chart_creator', true);
+      
+      // Trigger confetti celebration! 🎉
+      triggerConfetti();
+      
+      toast.success('🎉 Chart created successfully!', {
+        description: 'Your cosmic blueprint is ready to explore.',
+        duration: 4000,
       });
+      
+      // Clear draft and reset form
+      clearDraft();
+      resetData();
       setTimeUnknown(false);
+      setHasStartedForm(false);
+      
+      // Refresh quota after chart creation
+      if (onChartCreated) {
+        await onChartCreated();
+      }
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to create chart');
-      console.error('Chart creation error:', error);
+      trackFormSubmit('chart_creator', false);
+      toast.error(getErrorMessage(error, 'Failed to create chart'));
+      log.error('Chart creation failed', { error: error.message });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <ConfettiComponent />
+      
+      {/* Draft Restore Banner */}
+      {hasDraft && (
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 text-sm">
+            <AlertCircle className="h-4 w-4 text-primary shrink-0" />
+            <span>You have an unsaved draft. Would you like to restore it?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={restoreDraft}
+              className="h-7 px-2 text-xs border-primary/30 hover:bg-primary/10"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Restore
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={dismissDraft}
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="space-y-4" onFocus={handleInputFocus}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name (Optional)</Label>
@@ -189,7 +269,8 @@ const ChartCreator = ({ onSuccess }: ChartCreatorProps) => {
       >
         {isLoading ? 'Creating Chart...' : 'Create Chart'}
       </Button>
-    </form>
+      </form>
+    </>
   );
 };
 

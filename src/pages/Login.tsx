@@ -8,6 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { PageSEO } from '@/components/SEO';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('Login');
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -31,20 +35,22 @@ const Login = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
+      log.error('Login error', { error: String(error) });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse-glow" />
-      </div>
+    <>
+      <PageSEO page="login" />
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-glow" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse-glow" />
+        </div>
 
-      <Card className="w-full max-w-md relative border-border/50 backdrop-blur-sm bg-card/80">
+        <Card className="w-full max-w-md relative border-border/50 backdrop-blur-sm bg-card/80">
         <div className="absolute top-4 left-4 right-4 flex justify-between">
           <Button
             variant="ghost"
@@ -146,9 +152,10 @@ const Login = () => {
               Register
             </Link>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 };
 

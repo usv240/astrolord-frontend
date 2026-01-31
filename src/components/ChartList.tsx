@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { chartAPI } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star } from 'lucide-react';
+import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star, AlertTriangle, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChartBundle } from '@/types/chart';
 import { DailyCosmicChat } from './DailyCosmicChat';
@@ -11,6 +11,22 @@ import { PDFReportCard } from './PDFReportCard';
 import { ChartSearch } from './ChartSearch';
 import { FavoritesManager, useFavorites } from './FavoritesManager';
 import { EmptyStates } from './EmptyStates';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
+import { useUndoDelete } from '@/hooks/useUndoDelete';
+import { createLogger } from '@/utils/logger';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const log = createLogger('ChartList');
 
 interface Chart {
   chart_id: string;
@@ -44,9 +60,35 @@ const ChartList = ({
   const [selectedChart, setSelectedChart] = useState<ChartBundle | null>(null);
   const [isLoadingBundle, setIsLoadingBundle] = useState(false);
   const [showDailyForecast, setShowDailyForecast] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; chartId: string | null; chartName: string }>({
+    open: false,
+    chartId: null,
+    chartName: '',
+  });
 
   // Favorites management
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, toggleFavorite, isFavorite, isAnimating } = useFavorites();
+  
+  // Copy to clipboard for chart IDs
+  const { copy, isCopied } = useCopyToClipboard({
+    successMessage: 'Chart ID copied!',
+  });
+  
+  // Undo delete functionality
+  const { initiateDelete: initiateUndoDelete } = useUndoDelete<Chart>({
+    onDelete: async (chart) => {
+      await chartAPI.deleteChart(chart.chart_id);
+      if (selectedChart?.chart_id === chart.chart_id) {
+        setSelectedChart(null);
+      }
+    },
+    onUndo: async (chart) => {
+      // Re-fetch charts to restore the list
+      await loadCharts();
+    },
+    itemType: 'chart',
+    getItemName: (chart) => chart.name || 'Unnamed Chart',
+  });
 
   useEffect(() => {
     if (initialViewMode === 'daily') {
@@ -77,7 +119,7 @@ const ChartList = ({
       setCharts(response.data.charts || []);
     } catch (error: any) {
       toast.error('Failed to load charts');
-      console.error('Error loading charts:', error);
+      log.error('Failed to load charts', { error: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -95,27 +137,37 @@ const ChartList = ({
       // toast.success('Chart loaded successfully'); // Optional, maybe too noisy on auto-load
     } catch (error: any) {
       toast.error('Failed to load chart details');
-      console.error('Error loading chart:', error);
+      log.error('Failed to load chart details', { error: error.message });
     } finally {
       setIsLoadingBundle(false);
     }
   };
 
-  const handleDeleteChart = async (chartId: string, e: React.MouseEvent) => {
+  const openDeleteConfirm = (chartId: string, chartName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    if (!confirm('Are you sure you want to delete this chart?')) return;
+    setDeleteConfirm({ open: true, chartId, chartName });
+  };
 
-    try {
-      await chartAPI.deleteChart(chartId);
-      toast.success('Chart deleted successfully');
-      setCharts(charts.filter(c => c.chart_id !== chartId));
-      if (selectedChart?.chart_id === chartId) {
-        setSelectedChart(null);
-      }
-    } catch (error) {
-      toast.error('Failed to delete chart');
-      console.error('Error deleting chart:', error);
-    }
+  const handleDeleteChart = async () => {
+    if (!deleteConfirm.chartId) return;
+    
+    const chartId = deleteConfirm.chartId;
+    const chartToDelete = charts.find(c => c.chart_id === chartId);
+    setDeleteConfirm({ open: false, chartId: null, chartName: '' });
+
+    if (!chartToDelete) return;
+
+    // Use undo delete for better UX
+    initiateUndoDelete(
+      chartToDelete,
+      chartId,
+      // Optimistic delete
+      () => setCharts(prev => prev.filter(c => c.chart_id !== chartId)),
+      // Restore on undo
+      () => setCharts(prev => [...prev, chartToDelete].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ))
+    );
   };
 
   const viewChart = (chartId: string) => {
@@ -235,7 +287,7 @@ const ChartList = ({
                     className={`h-4 w-4 transition-colors ${isFavorite(chart.chart_id)
                       ? 'fill-yellow-500 text-yellow-500'
                       : 'text-muted-foreground hover:text-yellow-500'
-                      }`}
+                      } ${isAnimating(chart.chart_id) ? 'animate-star-pop' : ''}`}
                   />
                 </button>
               </div>
@@ -286,10 +338,22 @@ const ChartList = ({
                     {isLoadingBundle ? 'Loading...' : 'View Cosmic Details'}
                   </Button>
                   <Button
-                    onClick={(e) => handleDeleteChart(chart.chart_id, e)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copy(chart.chart_id);
+                    }}
                     variant="ghost"
                     size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Copy Chart ID"
+                  >
+                    {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    onClick={(e) => openDeleteConfirm(chart.chart_id, chart.name || 'Unnamed Chart', e)}
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -298,6 +362,34 @@ const ChartList = ({
             </Card>
           ))}
         </div>
+      ) : isLoadingBundle ? (
+        /* Chart Bundle Loading Skeleton */
+        <Card className="border-border/50 backdrop-blur-sm bg-card/80 overflow-hidden shadow-xl animate-in fade-in duration-300">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <div className="space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-28 rounded-full" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-9 rounded-full" />
+                <Skeleton className="h-9 w-32" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
       ) : (
         <Card className="border-border/50 backdrop-blur-sm bg-card/80 overflow-hidden shadow-xl">
           <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent pb-6">
@@ -396,6 +488,31 @@ const ChartList = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => !open && setDeleteConfirm({ open: false, chartId: null, chartName: '' })}>
+        <AlertDialogContent className="border-border/50 bg-card/95 backdrop-blur-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Chart
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteConfirm.chartName}"</span>? 
+              This action cannot be undone and all associated data will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border/50">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteChart}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Chart
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

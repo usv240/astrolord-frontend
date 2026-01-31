@@ -14,6 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import CentralizedChat, { ChatMessage } from './CentralizedChat';
 import { useQuota } from '@/hooks/useQuota';
 import { trackMatchmakingUsed, trackMessageSent } from '@/lib/analytics';
+import { useConfetti } from './Confetti';
+import { getErrorMessage } from '@/utils/errorHelpers';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('RelationshipMatch');
 
 interface PersonForm {
   name: string;
@@ -279,6 +284,9 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
 
   // Quota refresh hook for updating compatibility usage
   const { refresh: refreshQuota } = useQuota();
+  
+  // Confetti celebration hook
+  const { trigger: triggerConfetti, ConfettiComponent } = useConfetti();
 
   useEffect(() => {
     if (matchId) {
@@ -324,7 +332,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
         setChatHistory([]);
       }
     } catch (error) {
-      console.error("Failed to load match", error);
+      log.error('Failed to load match', { error: String(error) });
       toast.error("Failed to load match details");
     } finally {
       setLoading(false);
@@ -375,7 +383,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
         trackMatchmakingUsed();
       })
       .catch(error => {
-        console.error("Score calculation failed:", error);
+        log.warn('Score calculation failed', { error: String(error) });
         // We let the full report error handler manage the main UI feedback if both fail
       });
 
@@ -407,11 +415,12 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
         }
 
         toast.success("Match Analysis Complete! ❤️");
+        triggerConfetti(); // 🎉 Celebrate the match!
         if (onNewMatch) onNewMatch();
       })
       .catch(error => {
-        console.error("Full report failed:", error);
-        toast.error(error.response?.data?.detail || "Match analysis failed");
+        log.error('Full report failed', { error: String(error) });
+        toast.error(getErrorMessage(error, "Match analysis failed"));
 
         // If score succeeded but report failed, update state to show error in report section
         setResult(prev => prev ? {
@@ -495,7 +504,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
 
     } catch (error) {
       toast.error("Failed to send message");
-      console.error(error);
+      log.error('Failed to send chat message', { error: String(error) });
     } finally {
       setChatLoading(false);
     }
@@ -801,6 +810,9 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confetti celebration animation */}
+      <ConfettiComponent />
     </div>
   );
 };

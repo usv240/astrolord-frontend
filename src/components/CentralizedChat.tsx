@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,6 +27,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { MessageFormatter } from './MessageFormatter';
 import { MessageActions } from './MessageActions';
+import { TypingIndicator } from './ChatLoadingStates';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('CentralizedChat');
+
+// Move constants outside to prevent recreation
+const ANALYZING_MESSAGES = Object.freeze([
+  'Analyzing your chart with cosmic precision...',
+  'Decoding your planetary influences...',
+  'Exploring your astrological patterns...',
+  'Reading the planetary alignments...',
+  "Uncovering your chart's deeper insights...",
+  'Interpreting the stars for you...',
+  'Calculating your astrological transits...',
+]);
 
 export interface ChatMessage {
   id?: string;
@@ -36,7 +51,28 @@ export interface ChatMessage {
   suggestions?: string[];
   feedback?: 'like' | 'dislike';
   isSaved?: boolean;
+  timestamp?: string | Date;
 }
+
+// Helper function to format relative time
+const formatRelativeTime = (timestamp: string | Date | undefined): string => {
+  if (!timestamp) return '';
+  
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
 export interface CentralizedChatProps {
   messages: ChatMessage[];
@@ -63,6 +99,10 @@ export interface CentralizedChatProps {
   scrollHeight?: string;
   maxWidth?: string;
   compactHeader?: boolean;
+  /** Rate limiting state */
+  isRateLimited?: boolean;
+  /** Countdown display for rate limit (e.g., "0:45") */
+  rateLimitCountdown?: string;
 }
 
 const CentralizedChat = ({
@@ -90,6 +130,8 @@ const CentralizedChat = ({
   scrollHeight = 'h-[500px]',
   maxWidth = 'max-w-[80%]',
   compactHeader = false,
+  isRateLimited = false,
+  rateLimitCountdown = '',
 }: CentralizedChatProps) => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
   const [analyzingMessageIndex, setAnalyzingMessageIndex] = useState(0);
@@ -107,27 +149,16 @@ const CentralizedChat = ({
   });
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Analyzing messages that rotate while loading
-  const analyzingMessages = [
-    'Analyzing your chart with cosmic precision...',
-    'Decoding your planetary influences...',
-    'Exploring your astrological patterns...',
-    'Reading the planetary alignments...',
-    "Uncovering your chart's deeper insights...",
-    'Interpreting the stars for you...',
-    'Calculating your astrological transits...',
-  ];
-
   // Rotate analyzing message every 2 seconds while loading
   useEffect(() => {
     if (!isLoading) return;
 
     const interval = setInterval(() => {
-      setAnalyzingMessageIndex((prev) => (prev + 1) % analyzingMessages.length);
+      setAnalyzingMessageIndex((prev) => (prev + 1) % ANALYZING_MESSAGES.length);
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isLoading, analyzingMessages.length]);
+  }, [isLoading]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -147,7 +178,7 @@ const CentralizedChat = ({
     }
   }, [messages, hasSeenSuggestions]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
@@ -158,21 +189,33 @@ const CentralizedChat = ({
     try {
       await onSendMessage(userMessage);
     } catch (error) {
-      console.error('Failed to send message:', error);
+      log.error('Failed to send message', { error: String(error) });
       toast.error('Failed to send message');
     }
-  };
+  }, [input, isLoading, setInput, onSendMessage]);
 
-  const openFeedbackModal = (messageIndex: number, score: number) => {
+  const openFeedbackModal = useCallback((messageIndex: number, score: number) => {
     setFeedbackModal({
       isOpen: true,
       messageIndex,
       score,
       comment: '',
     });
-  };
+  }, []);
 
-  const submitFeedback = async () => {
+  const closeFeedbackModal = useCallback(() => {
+    setFeedbackModal(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const updateFeedbackScore = useCallback((score: number) => {
+    setFeedbackModal(prev => ({ ...prev, score }));
+  }, []);
+
+  const updateFeedbackComment = useCallback((comment: string) => {
+    setFeedbackModal(prev => ({ ...prev, comment }));
+  }, []);
+
+  const submitFeedback = useCallback(async () => {
     const { messageIndex, score, comment } = feedbackModal;
     if (messageIndex === null || score === null) return;
 
@@ -191,10 +234,10 @@ const CentralizedChat = ({
       toast.success('Feedback submitted');
       setFeedbackModal({ isOpen: false, messageIndex: null, score: null, comment: '' });
     } catch (error) {
-      console.error('Failed to submit feedback:', error);
+      log.error('Failed to submit feedback', { error: String(error) });
       toast.error('Failed to submit feedback');
     }
-  };
+  }, [feedbackModal, onSubmitFeedback, setMessages]);
 
   return (
     <Card className={`border-primary/20 bg-card/40 backdrop-blur-sm ${cardClassName}`}>
@@ -378,6 +421,15 @@ const CentralizedChat = ({
                             <ReactMarkdown>{message.content}</ReactMarkdown>
                           </div>
                         )}
+                        {message.timestamp && (
+                          <span className={`text-[10px] mt-1.5 block ${
+                            message.role === 'user' 
+                              ? 'text-primary-foreground/60' 
+                              : 'text-muted-foreground/60'
+                          }`}>
+                            {formatRelativeTime(message.timestamp)}
+                          </span>
+                        )}
                       </div>
 
                       {message.role === 'assistant' && message.id && (
@@ -420,17 +472,7 @@ const CentralizedChat = ({
                 ))}
                 {isLoading && (
                   <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <div className="flex flex-col gap-1 mt-1 shrink-0"></div>
-                      <div className="max-w-[80%] rounded-lg p-4 bg-muted text-foreground">
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          <p className="text-sm italic text-muted-foreground">
-                            {analyzingMessages[analyzingMessageIndex]}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <TypingIndicator />
                   </div>
                 )}
                 <div ref={scrollRef} />
@@ -461,21 +503,82 @@ const CentralizedChat = ({
           )}
         </ScrollArea>
 
-        <form onSubmit={handleSendMessage} className="flex gap-2 p-3 border-t border-primary/10">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question..."
-            disabled={isLoading}
-            className="bg-background/50 border-primary/20 text-sm"
-          />
-          <Button type="submit" size="sm" disabled={isLoading} className="px-3">
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+        {/* Quick Action Buttons */}
+        {messages.length > 0 && !isLoading && (
+          <div className="flex gap-1.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-hide">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs shrink-0 bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20"
+              onClick={() => onSendMessage("What are today's transits affecting me?")}
+              disabled={isLoading}
+            >
+              🌙 Transits
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs shrink-0 bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20"
+              onClick={() => onSendMessage("What career insights can you share?")}
+              disabled={isLoading}
+            >
+              💼 Career
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs shrink-0 bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/20"
+              onClick={() => onSendMessage("What about my love life and relationships?")}
+              disabled={isLoading}
+            >
+              💕 Love
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs shrink-0 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20"
+              onClick={() => onSendMessage("What remedies do you suggest for me?")}
+              disabled={isLoading}
+            >
+              🌿 Remedies
+            </Button>
+          </div>
+        )}
+
+        <form onSubmit={handleSendMessage} className="flex flex-col gap-2 p-3 border-t border-primary/10">
+          {/* Rate limit warning */}
+          {isRateLimited && rateLimitCountdown && (
+            <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-md border border-warning/20">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Rate limited - you can send another message in <strong>{rateLimitCountdown}</strong></span>
+            </div>
+          )}
+          
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={isRateLimited ? `Wait ${rateLimitCountdown}...` : "Ask about your chart..."}
+              disabled={isLoading || isRateLimited}
+              className="bg-background/50 border-primary/20 text-sm flex-1"
+            />
+            <Button 
+              type="submit" 
+              size="sm" 
+              disabled={isLoading || isRateLimited || !input.trim()} 
+              className="px-3 cosmic-glow btn-press"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </form>
       </CardContent>
 
@@ -497,55 +600,105 @@ const CentralizedChat = ({
         </DialogContent>
       </Dialog>
 
-      {/* Feedback Dialog */}
+      {/* Feedback Dialog - Contextual */}
       <Dialog
         open={feedbackModal.isOpen}
-        onOpenChange={(open) => setFeedbackModal((prev) => ({ ...prev, isOpen: open }))}
+        onOpenChange={(open) => !open && closeFeedbackModal()}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Provide Feedback</DialogTitle>
-            <DialogDescription>Help us improve the AI astrologer.</DialogDescription>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center pb-2">
+            <div className="mx-auto mb-3">
+              {feedbackModal.score === 1 ? (
+                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <span className="text-3xl">🎉</span>
+                </div>
+              ) : feedbackModal.score === -1 ? (
+                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <span className="text-3xl">🤔</span>
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-8 w-8 text-primary" />
+                </div>
+              )}
+            </div>
+            <DialogTitle className="text-xl">
+              {feedbackModal.score === 1 
+                ? "Glad that helped!" 
+                : feedbackModal.score === -1 
+                  ? "Sorry about that" 
+                  : "How was this response?"}
+            </DialogTitle>
+            <DialogDescription>
+              {feedbackModal.score === 1 
+                ? "Your feedback helps us make the AI astrologer even better." 
+                : feedbackModal.score === -1 
+                  ? "Help us understand what went wrong so we can improve." 
+                  : "Let us know if this insight was useful."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-3">
               <Button
                 variant={feedbackModal.score === 1 ? 'default' : 'outline'}
-                onClick={() => setFeedbackModal((prev) => ({ ...prev, score: 1 }))}
-                className="gap-2"
+                onClick={() => updateFeedbackScore(1)}
+                className={`gap-2 flex-1 max-w-[140px] transition-all ${
+                  feedbackModal.score === 1 
+                    ? 'bg-green-500 hover:bg-green-600 border-green-500' 
+                    : 'hover:border-green-500 hover:text-green-500'
+                }`}
               >
                 <ThumbsUp className="h-4 w-4" /> Helpful
               </Button>
               <Button
                 variant={feedbackModal.score === -1 ? 'destructive' : 'outline'}
-                onClick={() => setFeedbackModal((prev) => ({ ...prev, score: -1 }))}
-                className="gap-2"
+                onClick={() => updateFeedbackScore(-1)}
+                className={`gap-2 flex-1 max-w-[140px] transition-all ${
+                  feedbackModal.score === -1 
+                    ? '' 
+                    : 'hover:border-destructive hover:text-destructive'
+                }`}
               >
                 <ThumbsDown className="h-4 w-4" /> Not Helpful
               </Button>
             </div>
             <div className="space-y-2">
-              <Label>Additional Comments (Optional)</Label>
+              <Label className="text-sm text-muted-foreground">
+                {feedbackModal.score === 1 
+                  ? "What did you find most useful? (optional)" 
+                  : feedbackModal.score === -1 
+                    ? "What could have been better? (optional)" 
+                    : "Additional comments (optional)"}
+              </Label>
               <Textarea
                 value={feedbackModal.comment}
-                onChange={(e) =>
-                  setFeedbackModal((prev) => ({
-                    ...prev,
-                    comment: e.target.value,
-                  }))
+                onChange={(e) => updateFeedbackComment(e.target.value)}
+                placeholder={
+                  feedbackModal.score === 1 
+                    ? "The prediction was accurate, the advice was helpful..." 
+                    : feedbackModal.score === -1 
+                      ? "The information seemed incorrect, I needed more details..." 
+                      : "Share your thoughts..."
                 }
-                placeholder="What did you like or dislike?"
+                className="min-h-[80px] resize-none"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
-              variant="outline"
-              onClick={() => setFeedbackModal((prev) => ({ ...prev, isOpen: false }))}
+              variant="ghost"
+              onClick={closeFeedbackModal}
+              className="text-muted-foreground"
             >
-              Cancel
+              Skip
             </Button>
-            <Button onClick={submitFeedback}>Submit Feedback</Button>
+            <Button 
+              onClick={submitFeedback}
+              disabled={feedbackModal.score === null}
+              className="cosmic-glow"
+            >
+              Submit Feedback
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -553,4 +706,4 @@ const CentralizedChat = ({
   );
 };
 
-export default CentralizedChat;
+export default memo(CentralizedChat);

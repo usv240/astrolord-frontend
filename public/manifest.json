@@ -2,29 +2,85 @@
   "name": "AstroLord - Vedic Astrology Platform",
   "short_name": "AstroLord",
   "description": "Generate precise Vedic astrology birth charts, explore planetary positions, divisional charts, dashas, and chat with our AI astrologer for personalized cosmic insights.",
-  "start_url": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#0a0a0a",
-  "theme_color": "#6366f1",
+  "theme_color": "#8B5CF6",
   "orientation": "portrait-primary",
   "gcm_sender_id": "776238367032",
   "icons": [
     {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64",
-      "type": "image/x-icon"
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AstroLord Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create Chart",
+      "short_name": "New Chart",
+      "description": "Create a new birth chart",
+      "url": "/dashboard?tab=create",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily Horoscope",
+      "short_name": "Daily",
+      "description": "View your daily cosmic forecast",
+      "url": "/dashboard?view=daily",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Chat",
+      "short_name": "Chat",
+      "description": "Chat with AI astrologer",
+      "url": "/dashboard?tab=chat",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ],
   "categories": [
     "lifestyle",
-    "education"
+    "education",
+    "entertainment"
   ],
   "lang": "en-US",
-  "dir": "ltr"
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "handle_links": "preferred"
 }

@@ -1,4 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('API');
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -159,8 +162,13 @@ export const aiAPI = {
     promptId?: string,
     includeExamples: boolean = false,
     focus?: string
-  ) =>
-    authenticatedApi.post('/ai/chat', {
+  ) => {
+    // Guard: sessionId is required for chat
+    if (!sessionId) {
+      log.error('sessionId is required for chat', { sessionId });
+      return Promise.reject(new Error('Session ID is required for chat'));
+    }
+    return authenticatedApi.post('/ai/chat', {
       message,
       session_id: sessionId,
       model,
@@ -168,7 +176,8 @@ export const aiAPI = {
       prompt_id: promptId,
       include_examples: includeExamples,
       focus,
-    }),
+    });
+  },
 
   submitFeedback: (messageId: string, sessionId: string, score: number, comment?: string) =>
     authenticatedApi.post('/ai/feedback', {

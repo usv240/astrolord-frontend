@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, BellOff, Loader2, X, Sparkles, Calendar, AlertTriangle, Moon } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('NotificationPrompt');
 
 interface NotificationPromptProps {
     onComplete: () => void;
@@ -35,7 +38,7 @@ export const NotificationPrompt = ({ onComplete, onSkip }: NotificationPromptPro
                 setIsEnabling(false);
             }
         } catch (error) {
-            console.error('Failed to enable notifications:', error);
+            log.error('Failed to enable notifications', { error: String(error) });
             setIsEnabling(false);
         }
     };

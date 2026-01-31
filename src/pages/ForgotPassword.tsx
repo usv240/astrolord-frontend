@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('ForgotPassword');
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -21,7 +24,7 @@ const ForgotPassword = () => {
       setIsSubmitted(true);
       toast.success('Reset link sent to your email (check console for dev mode)');
     } catch (error) {
-      console.error('Forgot password error:', error);
+      log.error('Forgot password error', { error: String(error) });
       toast.error('Failed to send reset link');
     } finally {
       setIsLoading(false);

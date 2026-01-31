@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authAPI } from '@/lib/api';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AuthCallback');
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
@@ -27,7 +30,7 @@ const AuthCallback = () => {
           // Force a full page reload to ensure AuthContext re-initializes with the new token/user
           window.location.href = '/dashboard';
         } catch (error) {
-          console.error('Failed to fetch user details:', error);
+          log.error('Failed to fetch user details', { error: String(error) });
           toast.error('Login failed. Could not verify user details.');
           localStorage.removeItem('authToken');
           navigate('/login');

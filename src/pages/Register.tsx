@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('Register');
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -57,7 +60,7 @@ const Register = () => {
       await register(email.trim(), password, name || undefined);
       setStep('verify');
     } catch (error: any) {
-      console.error('Registration error:', error);
+      log.error('Registration error', { error: error.message });
       if (error.response?.status === 400 && error.response?.data?.detail === "Email already registered") {
         toast.info("Account already exists. Redirecting to login...");
         setTimeout(() => navigate('/login'), 1500);
@@ -74,7 +77,7 @@ const Register = () => {
       await verifyEmail(email.trim(), otp.trim());
       navigate('/dashboard');
     } catch (error) {
-      console.error('Verification error:', error);
+      log.error('Verification error', { error: String(error) });
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +92,7 @@ const Register = () => {
       setResendCountdown(30);
       setCanResend(false);
     } catch (error: any) {
-      console.error('Resend OTP error:', error);
+      log.error('Resend OTP error', { error: error.message });
       toast.error('Failed to resend code. Please try again.');
     }
   };

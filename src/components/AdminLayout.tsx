@@ -15,6 +15,9 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('AdminLayout');
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -109,7 +112,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       await logout();
       navigate('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
+      log.error('Logout failed', { error: String(error) });
     }
   };
 

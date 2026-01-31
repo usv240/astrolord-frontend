@@ -16,7 +16,11 @@ const getAnalyticsInstance = () => {
         try {
             analytics = getAnalytics(app);
         } catch (error) {
-            console.warn('Analytics not available:', error);
+            // Silent fail - analytics not available (SSR, blocked, etc.)
+            // Don't use logger here to avoid circular dependency
+            if (import.meta.env.DEV) {
+                console.warn('[Analytics] Not available:', error);
+            }
             return null;
         }
     }

@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { createLogger } from '@/utils/logger';
+
+const log = createLogger('ResetPassword');
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -33,7 +36,7 @@ const ResetPassword = () => {
       toast.success('Password reset successfully');
       navigate('/login');
     } catch (error) {
-      console.error('Reset password error:', error);
+      log.error('Reset password error', { error: String(error) });
       toast.error('Failed to reset password. Token may be expired.');
     } finally {
       setIsLoading(false);

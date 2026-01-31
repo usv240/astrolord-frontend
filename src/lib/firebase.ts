@@ -3,16 +3,20 @@
 
 import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { createLogger } from '@/utils/logger';
 
-// Firebase configuration - these are public client-side values (not secrets)
+const log = createLogger('Firebase');
+
+// Firebase configuration from environment variables
+// Falls back to hardcoded values for backwards compatibility
 const firebaseConfig = {
-    apiKey: "AIzaSyBK16JX-TSlDy26uUi0aZR5M0pwR8v-jyw",
-    authDomain: "astrolord-5816a.firebaseapp.com",
-    projectId: "astrolord-5816a",
-    storageBucket: "astrolord-5816a.firebasestorage.app",
-    messagingSenderId: "776238367032",
-    appId: "1:776238367032:web:8f1d7287516b80762f81cd",
-    measurementId: "G-8LTTZHTG43"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBK16JX-TSlDy26uUi0aZR5M0pwR8v-jyw",
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "astrolord-5816a.firebaseapp.com",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "astrolord-5816a",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "astrolord-5816a.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "776238367032",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:776238367032:web:8f1d7287516b80762f81cd",
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-8LTTZHTG43"
 };
 
 // Initialize Firebase
@@ -31,13 +35,13 @@ export const getMessagingInstance = async () => {
     try {
         const supported = await isSupported();
         if (!supported) {
-            console.warn('Firebase Messaging is not supported in this browser');
+            log.warn('Firebase Messaging is not supported in this browser');
             return null;
         }
         messaging = getMessaging(app);
         return messaging;
     } catch (error) {
-        console.error('Error initializing Firebase Messaging:', error);
+        log.error('Error initializing Firebase Messaging', { error: String(error) });
         return null;
     }
 };
@@ -46,7 +50,7 @@ export const getMessagingInstance = async () => {
  * VAPID key for web push notifications
  * From Firebase Console > Cloud Messaging > Web Push certificates
  */
-export const VAPID_KEY = 'BC7W5JG77rAKE9_JbKr3BYI5yitSKy_OewdBdCSkIjb7mcXLxsNufx-H7bbnD2QbBODTEweE5jT2bbi4t-UqB8M';
+export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BC7W5JG77rAKE9_JbKr3BYI5yitSKy_OewdBdCSkIjb7mcXLxsNufx-H7bbnD2QbBODTEweE5jT2bbi4t-UqB8M';
 
 /**
  * Request notification permission and get FCM token
@@ -56,14 +60,14 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     try {
         // Check if notifications are supported
         if (!('Notification' in window)) {
-            console.warn('Notifications are not supported in this browser');
+            log.warn('Notifications are not supported in this browser');
             return null;
         }
 
         // Request permission
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-            console.log('Notification permission denied');
+            log.info('Notification permission denied');
             return null;
         }
 
@@ -82,10 +86,10 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
             serviceWorkerRegistration: registration
         });
 
-        console.log('FCM Token obtained:', token?.substring(0, 20) + '...');
+        log.debug('FCM Token obtained', { token: token?.substring(0, 20) + '...' });
         return token;
     } catch (error) {
-        console.error('Error requesting notification permission:', error);
+        log.error('Error requesting notification permission', { error: String(error) });
         return null;
     }
 };
@@ -98,7 +102,7 @@ export const onForegroundMessage = (callback: (payload: any) => void) => {
     getMessagingInstance().then(messagingInstance => {
         if (messagingInstance) {
             onMessage(messagingInstance, (payload) => {
-                console.log('Foreground message received:', payload);
+                log.debug('Foreground message received', { payload });
                 callback(payload);
             });
         }
