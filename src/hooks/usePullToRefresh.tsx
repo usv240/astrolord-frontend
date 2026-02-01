@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 interface UsePullToRefreshOptions {
   onRefresh: () => Promise<void>;
-  threshold?: number; // Distance in px before triggering refresh
-  maxPull?: number; // Maximum pull distance
+  threshold?: number;
+  maxPull?: number;
   disabled?: boolean;
   containerRef?: React.RefObject<HTMLElement>;
 }
@@ -12,18 +12,22 @@ interface PullToRefreshState {
   isPulling: boolean;
   isRefreshing: boolean;
   pullDistance: number;
-  pullProgress: number; // 0-1 progress towards threshold
+  pullProgress: number;
+}
+
+interface ContainerProps {
+  onTouchStart: (e: React.TouchEvent) => void;
+  onTouchMove: (e: React.TouchEvent) => void;
+  onTouchEnd: () => void;
+}
+
+interface UsePullToRefreshReturn extends PullToRefreshState {
+  containerProps: ContainerProps;
+  PullIndicator: React.FC;
 }
 
 /**
  * usePullToRefresh - Enables pull-to-refresh gesture on mobile
- * 
- * Features:
- * - Touch gesture detection
- * - Threshold before triggering
- * - Visual progress feedback
- * - Works only when at top of page
- * - Haptic feedback (if available)
  */
 export function usePullToRefresh({
   onRefresh,
@@ -31,14 +35,7 @@ export function usePullToRefresh({
   maxPull = 120,
   disabled = false,
   containerRef,
-}: UsePullToRefreshOptions): PullToRefreshState & { 
-  containerProps: { 
-    onTouchStart: (e: React.TouchEvent) => void;
-    onTouchMove: (e: React.TouchEvent) => void;
-    onTouchEnd: () => void;
-  };
-  PullIndicator: React.FC;
-} {
+}: UsePullToRefreshOptions): UsePullToRefreshReturn {
   const [state, setState] = useState<PullToRefreshState>({
     isPulling: false,
     isRefreshing: false,
@@ -60,7 +57,7 @@ export function usePullToRefresh({
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (disabled || state.isRefreshing) return;
-    
+
     checkIsAtTop();
     if (!isAtTop.current) return;
 
@@ -70,7 +67,7 @@ export function usePullToRefresh({
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (disabled || !state.isPulling || state.isRefreshing) return;
-    
+
     const currentY = e.touches[0].clientY;
     const diff = currentY - touchStartY.current;
 
@@ -104,8 +101,8 @@ export function usePullToRefresh({
         navigator.vibrate(10);
       }
 
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         isPulling: false,
         isRefreshing: true,
         pullDistance: threshold, // Keep at threshold during refresh
@@ -145,18 +142,19 @@ export function usePullToRefresh({
   // Pull Indicator Component
   const PullIndicator: React.FC = useCallback(() => {
     const { pullDistance, pullProgress, isRefreshing } = state;
-    
+
     if (pullDistance <= 0 && !isRefreshing) return null;
 
     return (
       <div 
-        className="fixed top-0 left-0 right-0 flex justify-center pointer-events-none z-50 transition-transform duration-200"
-        style={{ 
-          transform: `translateY(${Math.min(pullDistance, maxPull) - 40}px)`,
-          opacity: Math.min(pullProgress * 2, 1),
-        }}
+        className= "fixed top-0 left-0 right-0 flex justify-center pointer-events-none z-50 transition-transform duration-200"
+    style = {{
+      transform: `translateY(${Math.min(pullDistance, maxPull) - 40}px)`,
+        opacity: Math.min(pullProgress * 2, 1),
+        }
+  }
       >
-        <div className={`
+    <div className={`
           flex items-center justify-center
           w-10 h-10 rounded-full
           bg-card/95 backdrop-blur-lg
@@ -164,42 +162,43 @@ export function usePullToRefresh({
           shadow-lg
           ${isRefreshing ? 'animate-spin' : ''}
         `}>
-          <div 
-            className={`
+  <div 
+            className={
+  `
               w-5 h-5 rounded-full border-2 border-primary
               ${isRefreshing ? 'border-t-transparent animate-spin' : ''}
             `}
-            style={{
-              transform: isRefreshing ? 'none' : `rotate(${pullProgress * 360}deg)`,
+style = {{
+  transform: isRefreshing ? 'none' : `rotate(${pullProgress * 360}deg)`,
             }}
           >
-            {!isRefreshing && (
-              <svg 
-                viewBox="0 0 24 24" 
-                className="w-full h-full text-primary"
-                style={{ transform: `rotate(${pullProgress * 180}deg)` }}
+  {!isRefreshing && (
+    <svg 
+                viewBox="0 0 24 24"
+className = "w-full h-full text-primary"
+style = {{ transform: `rotate(${pullProgress * 180}deg)` }}
               >
-                <path
+  <path
                   fill="currentColor"
-                  d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
-                />
-              </svg>
+d = "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
+  />
+  </svg>
             )}
-          </div>
-        </div>
-      </div>
+</div>
+  </div>
+  </div>
     );
   }, [state, maxPull]);
 
-  return {
-    ...state,
-    containerProps: {
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
-      onTouchEnd: handleTouchEnd,
-    },
-    PullIndicator,
-  };
+return {
+  ...state,
+  containerProps: {
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: handleTouchEnd,
+  },
+  PullIndicator,
+};
 }
 
 export default usePullToRefresh;

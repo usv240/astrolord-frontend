@@ -127,21 +127,19 @@ export function useTouchSupport(): TouchCapabilities {
   });
 
   React.useEffect(() => {
+    const hasTouch =
+      ('ontouchstart' in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      ('msMaxTouchPoints' in navigator && (navigator as any).msMaxTouchPoints > 0);
+
+    const isPointerEvent =
+      'PointerEvent' in window &&
+      !(window.navigator as any).userAgentData?.mobile === false;
+
     const capabilities: TouchCapabilities = {
-      hasTouch: () => {
-        return (
-          ('ontouchstart' in window) ||
-          (navigator.maxTouchPoints > 0) ||
-          ('msMaxTouchPoints' in navigator && navigator.msMaxTouchPoints > 0)
-        );
-      }(),
+      hasTouch,
       maxTouchPoints: navigator.maxTouchPoints || 0,
-      isPointerEvent: () => {
-        return (
-          'PointerEvent' in window &&
-          !window.navigator.userAgentData?.mobile === false
-        );
-      }(),
+      isPointerEvent,
     };
 
     setTouchCapabilities(capabilities);
@@ -162,7 +160,7 @@ export function useVirtualKeyboardHeight(): number {
       const screenHeight = window.screen.height;
       const visibleHeight = Math.min(windowHeight, screenHeight);
       const calculatedHeight = screenHeight - visibleHeight;
-      
+
       setKeyboardHeight(Math.max(0, calculatedHeight));
     };
 
@@ -198,7 +196,7 @@ export function useResponsiveValue<T>(
     .sort(([, a], [, b]) => a - b);
 
   const currentBreakpointValue = MOBILE_BREAKPOINTS[breakpoint as keyof typeof MOBILE_BREAKPOINTS];
-  
+
   for (let i = breakpoints.length - 1; i >= 0; i--) {
     const [key, value] = breakpoints[i];
     if (value <= currentBreakpointValue && key in values) {
