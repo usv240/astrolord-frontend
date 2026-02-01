@@ -547,13 +547,7 @@ const Settings = () => {
                 <CardDescription>Redeem promo codes to unlock special features and bonuses.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <PromoCodeInput
-                  onRedeemSuccess={() => {
-                    toast.success('🎉 Reward Applied!', {
-                      description: 'Your new benefits are now active.',
-                    });
-                  }}
-                />
+                <PromoCodeInput />
 
                 <div className="rounded-lg border border-border/50 p-4 bg-muted/30">
                   <h3 className="font-semibold mb-2">Where to find promo codes?</h3>

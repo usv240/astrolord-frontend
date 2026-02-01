@@ -43,7 +43,7 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
   const [timeUnknown, setTimeUnknown] = useState(false);
   const [hasStartedForm, setHasStartedForm] = useState(false);
   const { trigger: triggerConfetti, ConfettiComponent } = useConfetti();
-  
+
   // Auto-save draft functionality
   const {
     data: formData,
@@ -81,6 +81,11 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
     e.preventDefault();
     setIsLoading(true);
 
+    // DEBUG: Check for auth token presence
+    const token = localStorage.getItem('authToken');
+    log.info('Submitting chart creation request', { hasToken: !!token, tokenLength: token?.length });
+
+
     try {
       const chartData = {
         name: formData.name || undefined,
@@ -101,30 +106,30 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
       };
 
       await chartAPI.createChart(chartData);
-      
+
       // Track chart creation for analytics
       trackChartCreated('birth_chart');
       trackFormSubmit('chart_creator', true);
-      
+
       // Trigger confetti celebration! 🎉
       triggerConfetti();
-      
+
       toast.success('🎉 Chart created successfully!', {
         description: 'Your cosmic blueprint is ready to explore.',
         duration: 4000,
       });
-      
+
       // Clear draft and reset form
       clearDraft();
       resetData();
       setTimeUnknown(false);
       setHasStartedForm(false);
-      
+
       // Refresh quota after chart creation
       if (onChartCreated) {
         await onChartCreated();
       }
-      
+
       if (onSuccess) {
         onSuccess();
       }
@@ -140,7 +145,7 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
   return (
     <>
       <ConfettiComponent />
-      
+
       {/* Draft Restore Banner */}
       {hasDraft && (
         <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-lg flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -171,104 +176,104 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
           </div>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-4" onFocus={handleInputFocus}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name (Optional)</Label>
-          <Input
-            id="name"
-            placeholder="John Doe"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="bg-muted/50 border-border/50"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="gender">Gender</Label>
-          <Select
-            value={formData.gender}
-            onValueChange={(value) => setFormData({ ...formData, gender: value })}
-          >
-            <SelectTrigger className="bg-muted/50 border-border/50">
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="male">Male</SelectItem>
-              <SelectItem value="female">Female</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="dob">Date of Birth</Label>
-          <Input
-            id="dob"
-            type="date"
-            value={formData.dob}
-            onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-            required
-            className="bg-muted/50 border-border/50"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="time">Time of Birth</Label>
-          <Input
-            id="time"
-            type="time"
-            value={timeUnknown ? '12:00' : formData.time}
-            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-            required={!timeUnknown}
-            disabled={timeUnknown}
-            className="bg-muted/50 border-border/50"
-          />
-          <div className="flex items-center space-x-2 pt-1">
-            <Checkbox 
-                id="timeUnknown" 
-                checked={timeUnknown}
-                onCheckedChange={(checked) => {
-                    setTimeUnknown(checked as boolean);
-                    if (checked) {
-                        setFormData(prev => ({ ...prev, time: '12:00' }));
-                    } else {
-                        setFormData(prev => ({ ...prev, time: '' }));
-                    }
-                }}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name (Optional)</Label>
+            <Input
+              id="name"
+              placeholder="John Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="bg-muted/50 border-border/50"
             />
-            <Label htmlFor="timeUnknown" className="text-sm font-normal text-muted-foreground cursor-pointer">
-              I don't know exact time (Use 12:00 PM)
-            </Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={formData.gender}
+              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            >
+              <SelectTrigger className="bg-muted/50 border-border/50">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label>City of Birth</Label>
-        <CitySearch 
-          onSelect={handleCitySelect} 
-          className="w-full"
-        />
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="dob">Date of Birth</Label>
+            <Input
+              id="dob"
+              type="date"
+              value={formData.dob}
+              onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+              required
+              className="bg-muted/50 border-border/50"
+            />
+          </div>
 
-      {/* Hidden inputs to store precise location data, but kept visible for debugging if needed (or make hidden type) */}
-      <div className="grid grid-cols-3 gap-4 opacity-50 text-xs">
-        <div>Lat: {formData.lat || '-'}</div>
-        <div>Lon: {formData.lon || '-'}</div>
-        <div>TZ: {formData.tz || '-'}</div>
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="time">Time of Birth</Label>
+            <Input
+              id="time"
+              type="time"
+              value={timeUnknown ? '12:00' : formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+              required={!timeUnknown}
+              disabled={timeUnknown}
+              className="bg-muted/50 border-border/50"
+            />
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="timeUnknown"
+                checked={timeUnknown}
+                onCheckedChange={(checked) => {
+                  setTimeUnknown(checked as boolean);
+                  if (checked) {
+                    setFormData(prev => ({ ...prev, time: '12:00' }));
+                  } else {
+                    setFormData(prev => ({ ...prev, time: '' }));
+                  }
+                }}
+              />
+              <Label htmlFor="timeUnknown" className="text-sm font-normal text-muted-foreground cursor-pointer">
+                I don't know exact time (Use 12:00 PM)
+              </Label>
+            </div>
+          </div>
+        </div>
 
-      <Button
-        type="submit"
-        className="w-full cosmic-glow"
-        disabled={isLoading || !formData.lat || !formData.lon}
-      >
-        {isLoading ? 'Creating Chart...' : 'Create Chart'}
-      </Button>
+        <div className="space-y-2">
+          <Label>City of Birth</Label>
+          <CitySearch
+            onSelect={handleCitySelect}
+            className="w-full"
+          />
+        </div>
+
+        {/* Hidden inputs to store precise location data, but kept visible for debugging if needed (or make hidden type) */}
+        <div className="grid grid-cols-3 gap-4 opacity-50 text-xs">
+          <div>Lat: {formData.lat || '-'}</div>
+          <div>Lon: {formData.lon || '-'}</div>
+          <div>TZ: {formData.tz || '-'}</div>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full cosmic-glow"
+          disabled={isLoading || !formData.lat || !formData.lon}
+        >
+          {isLoading ? 'Creating Chart...' : 'Create Chart'}
+        </Button>
       </form>
     </>
   );

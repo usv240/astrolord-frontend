@@ -51,6 +51,7 @@ export default function AdminPromoPage() {
     const [success, setSuccess] = useState<string | null>(null);
     const [includeInactive, setIncludeInactive] = useState(false);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
+    const [editingCode, setEditingCode] = useState<string | null>(null); // Track code being edited
 
     // Create form state
     const [formData, setFormData] = useState({
@@ -63,7 +64,7 @@ export default function AdminPromoPage() {
         bonus_hourly: '' as string | number,  // empty = null (unlimited), number = add to base
         bonus_charts: '' as string | number,  // empty = no bonus, -1 = unlimited
         bonus_duration_days: 7,
-        max_uses: '',
+        max_uses: '' as string | number,
         max_uses_per_user: 1,
         valid_days: 30,
         target_free_only: false,
@@ -98,6 +99,35 @@ export default function AdminPromoPage() {
         }
     };
 
+    const handleEdit = (promo: PromoCode) => {
+        setEditingCode(promo.code);
+
+        // Calculate remaining valid days
+        const validUntil = new Date(promo.valid_until);
+        const now = new Date();
+        const diffTime = Math.max(0, validUntil.getTime() - now.getTime());
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        setFormData({
+            code: promo.code,
+            description: promo.description || '',
+            reward_type: promo.reward_type,
+            plan_type: promo.reward_config.plan_type || 'weekly_pass',
+            duration_days: promo.reward_config.duration_days || 7,
+            bonus_messages: promo.reward_config.bonus_messages || 50,
+            bonus_hourly: promo.reward_config.bonus_hourly ?? '',
+            bonus_charts: promo.reward_config.bonus_charts ?? '',
+            bonus_duration_days: promo.reward_config.bonus_duration_days || 7,
+            max_uses: promo.max_uses ?? '',
+            max_uses_per_user: promo.max_uses_per_user || 1,
+            valid_days: daysLeft,
+            target_free_only: promo.target_plans?.includes('free') || false,
+        });
+
+        setSelectedTab('create');
+        window.scrollTo(0, 0);
+    };
+
     const handleCreatePromo = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -113,11 +143,12 @@ export default function AdminPromoPage() {
             const validUntil = new Date();
             validUntil.setDate(validUntil.getDate() + formData.valid_days);
 
+            // Construct payload for Create
             const payload: any = {
                 code: formData.code.toUpperCase(),
                 description: formData.description,
                 reward_type: formData.reward_type,
-                max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
+                max_uses: formData.max_uses === '' ? null : Number(formData.max_uses),
                 max_uses_per_user: formData.max_uses_per_user,
                 valid_until: validUntil.toISOString(),
                 target_plans: formData.target_free_only ? ['free'] : null,
@@ -131,27 +162,64 @@ export default function AdminPromoPage() {
             } else {
                 payload.bonus_messages_config = {
                     bonus_messages: formData.bonus_messages,
-                    bonus_hourly: formData.bonus_hourly === '' ? null : parseInt(String(formData.bonus_hourly)),
-                    bonus_charts: formData.bonus_charts === '' ? null : parseInt(String(formData.bonus_charts)),
+                    bonus_hourly: formData.bonus_hourly === '' ? null : Number(formData.bonus_hourly),
+                    bonus_charts: formData.bonus_charts === '' ? null : Number(formData.bonus_charts),
                     bonus_duration_days: formData.bonus_duration_days,
                 };
             }
 
-            await adminAPI.createPromoCode(payload);
+            if (editingCode) {
+                // UPDATE existing code
+                const updatePayload: any = {
+                    description: formData.description,
+                    max_uses: formData.max_uses === '' ? null : Number(formData.max_uses),
+                    max_uses_per_user: formData.max_uses_per_user,
+                    valid_until: validUntil.toISOString(),
+                    target_plans: formData.target_free_only ? ['free'] : null,
+                };
 
-            setSuccess(`Promo code "${formData.code.toUpperCase()}" created successfully!`);
+                // Add reward config updates
+                if (formData.reward_type === 'bonus_messages') {
+                    updatePayload.bonus_messages = formData.bonus_messages;
+                    updatePayload.bonus_hourly = formData.bonus_hourly === '' ? null : Number(formData.bonus_hourly);
+                    updatePayload.bonus_charts = formData.bonus_charts === '' ? null : Number(formData.bonus_charts);
+                    updatePayload.bonus_duration_days = formData.bonus_duration_days;
+                }
+                // Note: Subscription plan type/duration currently not updatable via this endpoint seamlessly without backend changes, 
+                // but typically description/uses/validity are what people edit.
+
+                await adminAPI.updatePromoCode(editingCode, updatePayload);
+                setSuccess(`Promo code "${editingCode}" updated successfully!`);
+            } else {
+                // CREATE new code
+                await adminAPI.createPromoCode(payload);
+                setSuccess(`Promo code "${formData.code.toUpperCase()}" created successfully!`);
+            }
+
             setFormData({
-                ...formData,
                 code: '',
                 description: '',
+                reward_type: 'bonus_messages',
+                plan_type: 'weekly_pass',
+                duration_days: 7,
+                bonus_messages: 50,
+                bonus_hourly: '',
+                bonus_charts: '',
+                bonus_duration_days: 7,
+                max_uses: '',
+                max_uses_per_user: 1,
+                valid_days: 30,
+                target_free_only: false,
             });
+            setEditingCode(null);
 
             // Refresh codes list
             await fetchPromoCodes();
             setTimeout(() => setSuccess(null), 5000);
+            if (editingCode) setSelectedTab('codes');
 
         } catch (err: any) {
-            setError(err.response?.data?.detail || err.message || 'Failed to create promo code');
+            setError(err.response?.data?.detail || err.message || 'Failed to save promo code');
         } finally {
             setCreating(false);
         }
@@ -220,7 +288,7 @@ export default function AdminPromoPage() {
                 <div className="flex gap-4 mb-6 border-b border-gray-200">
                     {[
                         { id: 'codes', label: 'Active Codes', icon: Ticket },
-                        { id: 'create', label: 'Create New', icon: Plus },
+                        { id: 'create', label: editingCode ? 'Edit Code' : 'Create New', icon: editingCode ? CheckCircle : Plus },
                         { id: 'redemptions', label: 'Redemptions', icon: Users },
                     ].map((tab) => {
                         const Icon = tab.icon;
@@ -228,6 +296,25 @@ export default function AdminPromoPage() {
                             <button
                                 key={tab.id}
                                 onClick={() => {
+                                    if (tab.id === 'create' && !editingCode) {
+                                        // Reset form if clicking create new
+                                        setEditingCode(null);
+                                        setFormData({
+                                            code: '',
+                                            description: '',
+                                            reward_type: 'bonus_messages',
+                                            plan_type: 'weekly_pass',
+                                            duration_days: 7,
+                                            bonus_messages: 50,
+                                            bonus_hourly: '',
+                                            bonus_charts: '',
+                                            bonus_duration_days: 7,
+                                            max_uses: '',
+                                            max_uses_per_user: 1,
+                                            valid_days: 30,
+                                            target_free_only: false,
+                                        });
+                                    }
                                     setSelectedTab(tab.id as any);
                                     if (tab.id === 'redemptions') fetchRedemptions();
                                 }}
@@ -275,6 +362,7 @@ export default function AdminPromoPage() {
                                         key={promo._id}
                                         promo={promo}
                                         onCopy={copyToClipboard}
+                                        onEdit={handleEdit}
                                         onDeactivate={handleDeactivate}
                                         copied={copiedCode === promo.code}
                                     />
@@ -284,7 +372,7 @@ export default function AdminPromoPage() {
                     </div>
                 )}
 
-                {/* Create Tab */}
+                {/* Create/Edit Tab */}
                 {selectedTab === 'create' && (
                     <div className="max-w-2xl">
                         <form onSubmit={handleCreatePromo} className="space-y-6 bg-white rounded-lg p-6 border border-gray-200">
@@ -299,17 +387,21 @@ export default function AdminPromoPage() {
                                         value={formData.code}
                                         onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                                         placeholder="ASTRO50"
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-gray-50"
                                         maxLength={20}
+                                        disabled={!!editingCode} // Cannot change code when editing
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={generateRandomCode}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                                    >
-                                        Generate
-                                    </button>
+                                    {!editingCode && (
+                                        <button
+                                            type="button"
+                                            onClick={generateRandomCode}
+                                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                        >
+                                            Generate
+                                        </button>
+                                    )}
                                 </div>
+                                {editingCode && <p className="text-xs text-gray-500 mt-1">Code cannot be changed once created. Deactivate and create new if needed.</p>}
                             </div>
 
                             {/* Description */}
@@ -326,38 +418,40 @@ export default function AdminPromoPage() {
                                 />
                             </div>
 
-                            {/* Reward Type */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Reward Type *
-                                </label>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, reward_type: 'bonus_messages' })}
-                                        className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.reward_type === 'bonus_messages'
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        <MessageCircle className="w-6 h-6 text-purple-600 mb-2" />
-                                        <p className="font-medium">Bonus Messages</p>
-                                        <p className="text-sm text-gray-500">Extra messages per day</p>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, reward_type: 'subscription' })}
-                                        className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.reward_type === 'subscription'
-                                            ? 'border-purple-500 bg-purple-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        <Gift className="w-6 h-6 text-purple-600 mb-2" />
-                                        <p className="font-medium">Free Subscription</p>
-                                        <p className="text-sm text-gray-500">Grant a paid plan</p>
-                                    </button>
+                            {!editingCode && (
+                                /* Reward Type - only editable on create */
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Reward Type *
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, reward_type: 'bonus_messages' })}
+                                            className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.reward_type === 'bonus_messages'
+                                                ? 'border-purple-500 bg-purple-50'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <MessageCircle className="w-6 h-6 text-purple-600 mb-2" />
+                                            <p className="font-medium">Bonus Messages</p>
+                                            <p className="text-sm text-gray-500">Extra messages per day</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, reward_type: 'subscription' })}
+                                            className={`p-4 rounded-lg border-2 text-left transition-colors ${formData.reward_type === 'subscription'
+                                                ? 'border-purple-500 bg-purple-50'
+                                                : 'border-gray-200 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <Gift className="w-6 h-6 text-purple-600 mb-2" />
+                                            <p className="font-medium">Free Subscription</p>
+                                            <p className="text-sm text-gray-500">Grant a paid plan</p>
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Reward Config */}
                             {formData.reward_type === 'bonus_messages' ? (
@@ -433,11 +527,13 @@ export default function AdminPromoPage() {
                                         value={formData.plan_type}
                                         onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                        disabled={!!editingCode}
                                     >
                                         {PLAN_OPTIONS.map((opt) => (
                                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                                         ))}
                                     </select>
+                                    {editingCode && <p className="text-xs text-gray-500 mt-1">Plan type cannot be changed. Deactivate and create new.</p>}
                                 </div>
                             )}
 
@@ -474,7 +570,7 @@ export default function AdminPromoPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Valid for (days)
+                                        Valid for (days from now)
                                     </label>
                                     <input
                                         type="number"
@@ -484,6 +580,7 @@ export default function AdminPromoPage() {
                                         max={365}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                                     />
+                                    {editingCode && <p className="text-xs text-gray-500 mt-1">This will extend validity from today.</p>}
                                 </div>
                                 <div className="flex items-center">
                                     <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -499,23 +596,52 @@ export default function AdminPromoPage() {
                             </div>
 
                             {/* Submit */}
-                            <button
-                                type="submit"
-                                disabled={creating || !formData.code.trim()}
-                                className="w-full py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {creating ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                        Creating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="w-5 h-5" />
-                                        Create Promo Code
-                                    </>
+                            <div className="flex gap-3">
+                                {editingCode && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditingCode(null);
+                                            setFormData({
+                                                code: '',
+                                                description: '',
+                                                reward_type: 'bonus_messages',
+                                                plan_type: 'weekly_pass',
+                                                duration_days: 7,
+                                                bonus_messages: 50,
+                                                bonus_hourly: '',
+                                                bonus_charts: '',
+                                                bonus_duration_days: 7,
+                                                max_uses: '',
+                                                max_uses_per_user: 1,
+                                                valid_days: 30,
+                                                target_free_only: false,
+                                            });
+                                            setSelectedTab('codes');
+                                        }}
+                                        className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
+                                    >
+                                        Cancel
+                                    </button>
                                 )}
-                            </button>
+                                <button
+                                    type="submit"
+                                    disabled={creating || !formData.code.trim()}
+                                    className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {creating ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                            {editingCode ? 'Updating...' : 'Creating...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {editingCode ? <CheckCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                            {editingCode ? 'Update Promo Code' : 'Create Promo Code'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 )}
@@ -576,11 +702,13 @@ export default function AdminPromoPage() {
 function PromoCodeCard({
     promo,
     onCopy,
+    onEdit,
     onDeactivate,
     copied,
 }: {
     promo: PromoCode;
     onCopy: (code: string) => void;
+    onEdit: (promo: PromoCode) => void;
     onDeactivate: (code: string) => void;
     copied: boolean;
 }) {
@@ -623,15 +751,26 @@ function PromoCodeCard({
                     </div>
                 </div>
 
-                {promo.is_active && !isExpired && (
-                    <button
-                        onClick={() => onDeactivate(promo.code)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded"
-                        title="Deactivate"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {promo.is_active && !isExpired && (
+                        <>
+                            <button
+                                onClick={() => onEdit(promo)}
+                                className="p-2 text-blue-500 hover:bg-blue-50 rounded"
+                                title="Edit"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                            </button>
+                            <button
+                                onClick={() => onDeactivate(promo.code)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                title="Deactivate"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
 
             <div className="mt-4 grid grid-cols-4 gap-4 text-sm">
@@ -646,6 +785,11 @@ function PromoCodeCard({
                                     {promo.reward_config.bonus_hourly !== undefined && (
                                         <span className="text-xs text-gray-500 ml-1">
                                             ({promo.reward_config.bonus_hourly === null ? '∞' : promo.reward_config.bonus_hourly}/hr)
+                                        </span>
+                                    )}
+                                    {promo.reward_config.bonus_charts !== undefined && promo.reward_config.bonus_charts !== null && (
+                                        <span className="text-xs text-purple-600 ml-1 block">
+                                            +{promo.reward_config.bonus_charts === -1 ? '∞' : promo.reward_config.bonus_charts} charts
                                         </span>
                                     )}
                                 </>

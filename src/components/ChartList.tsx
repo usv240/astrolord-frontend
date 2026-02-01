@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { chartAPI } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star, AlertTriangle, Copy, Check, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChartBundle } from '@/types/chart';
 import { DailyCosmicChat } from './DailyCosmicChat';
@@ -45,7 +45,9 @@ const ChartList = ({
   initialViewMode,
   onViewModeChange,
   onViewChart,
-  onCloseChart
+  onCloseChart,
+  onCreateNew,
+  refreshTrigger,
 }: {
   onSelectChart?: (chartId: string) => void;
   activeChartId?: string;
@@ -53,6 +55,8 @@ const ChartList = ({
   onViewModeChange?: (mode: string | null) => void;
   onViewChart?: (chartId: string) => void;
   onCloseChart?: () => void;
+  onCreateNew?: () => void;
+  refreshTrigger?: number;
 }) => {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [filteredCharts, setFilteredCharts] = useState<Chart[]>([]);
@@ -68,12 +72,12 @@ const ChartList = ({
 
   // Favorites management
   const { favorites, toggleFavorite, isFavorite, isAnimating } = useFavorites();
-  
+
   // Copy to clipboard for chart IDs
   const { copy, isCopied } = useCopyToClipboard({
     successMessage: 'Chart ID copied!',
   });
-  
+
   // Undo delete functionality
   const { initiateDelete: initiateUndoDelete } = useUndoDelete<Chart>({
     onDelete: async (chart) => {
@@ -98,7 +102,7 @@ const ChartList = ({
 
   useEffect(() => {
     loadCharts();
-  }, []);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     if (activeChartId) {
@@ -150,7 +154,7 @@ const ChartList = ({
 
   const handleDeleteChart = async () => {
     if (!deleteConfirm.chartId) return;
-    
+
     const chartId = deleteConfirm.chartId;
     const chartToDelete = charts.find(c => c.chart_id === chartId);
     setDeleteConfirm({ open: false, chartId: null, chartName: '' });
@@ -164,7 +168,7 @@ const ChartList = ({
       // Optimistic delete
       () => setCharts(prev => prev.filter(c => c.chart_id !== chartId)),
       // Restore on undo
-      () => setCharts(prev => [...prev, chartToDelete].sort((a, b) => 
+      () => setCharts(prev => [...prev, chartToDelete].sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ))
     );
@@ -205,7 +209,9 @@ const ChartList = ({
         type="no-charts"
         onPrimaryAction={() => {
           // Trigger create tab
-          if (onViewChart) {
+          if (onCreateNew) {
+            onCreateNew();
+          } else if (onViewChart) {
             onViewChart('');
           }
         }}
@@ -243,11 +249,22 @@ const ChartList = ({
 
   return (
     <div className="space-y-6">
-      {/* Search & Filter */}
-      <ChartSearch
-        charts={charts}
-        onFilteredChange={setFilteredCharts}
-      />
+      {/* Search & Filter & Refresh */}
+      <div className="flex gap-2">
+        <ChartSearch
+          charts={charts}
+          onFilteredChange={setFilteredCharts}
+        />
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => loadCharts()}
+          className="shrink-0 border-border/50 hover:bg-muted"
+          title="Refresh Charts"
+        >
+          <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
 
       {/* Favorites Section */}
       {!selectedChart && (
@@ -498,7 +515,7 @@ const ChartList = ({
               Delete Chart
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteConfirm.chartName}"</span>? 
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteConfirm.chartName}"</span>?
               This action cannot be undone and all associated data will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>

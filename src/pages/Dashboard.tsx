@@ -65,6 +65,7 @@ const Dashboard = () => {
     matchId: null,
     matchName: '',
   });
+  const [chartListRefreshKey, setChartListRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -88,10 +89,10 @@ const Dashboard = () => {
 
   const handleDeleteMatch = useCallback(async () => {
     if (!deleteMatchConfirm.matchId) return;
-    
+
     const matchId = deleteMatchConfirm.matchId;
     setDeleteMatchConfirm({ open: false, matchId: null, matchName: '' });
-    
+
     try {
       await relationshipAPI.deleteMatch(matchId);
       setRecentMatches(prev => prev.filter(m => m.match_id !== matchId));
@@ -136,7 +137,7 @@ const Dashboard = () => {
       {/* Onboarding Flow */}
       <OnboardingManager />
 
-      <div className="min-h-screen bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
+      <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse-glow" />
@@ -173,26 +174,28 @@ const Dashboard = () => {
                 <img
                   src="/logo.png"
                   alt="AstroLord"
-                  className="h-10 w-auto" // Slightly smaller logo on mobile if needed, but 12 is fine
+                  className="h-8 sm:h-10 w-auto"
                 />
               </Link>
-              <div>
-                <p className="text-sm text-muted-foreground">
+              {/* Hide welcome message on small screens */}
+              <div className="hidden sm:block">
+                <p className="text-sm text-muted-foreground truncate max-w-[150px] md:max-w-[200px]">
                   Welcome, {user.name || user.email}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <ThemeToggle />
 
               {user.is_admin && (
                 <Button
                   variant="outline"
                   onClick={() => navigate('/admin')}
-                  className="border-border/50"
+                  className="border-border/50 px-2 sm:px-3"
+                  size="sm"
                 >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Admin
+                  <Shield className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
                 </Button>
               )}
 
@@ -201,7 +204,8 @@ const Dashboard = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="border-border/50 gap-2 px-3"
+                    className="border-border/50 gap-1 sm:gap-2 px-2 sm:px-3"
+                    size="sm"
                   >
                     <User className="h-4 w-4" />
                     <ChevronDown className="h-3 w-3" />
@@ -211,7 +215,7 @@ const Dashboard = () => {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                      <p className="text-xs leading-none text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -276,6 +280,8 @@ const Dashboard = () => {
                     <p className="text-muted-foreground">View, manage, and search all your birth charts</p>
                   </div>
                   <ChartList
+                    key={chartListRefreshKey}
+                    refreshTrigger={chartListRefreshKey}
                     onSelectChart={handleChartSelect}
                     activeChartId={selectedChartId}
                     initialViewMode={viewMode}
@@ -299,6 +305,7 @@ const Dashboard = () => {
                       }
                       setSearchParams(newParams);
                     }}
+                    onCreateNew={() => handleTabChange('create')}
                   />
                 </div>
               )}
@@ -320,6 +327,8 @@ const Dashboard = () => {
                     <CardContent>
                       <ChartCreator
                         onSuccess={() => {
+                          // Increment refresh key to reload chart list
+                          setChartListRefreshKey(prev => prev + 1);
                           const newParams = new URLSearchParams(searchParams);
                           newParams.set('tab', 'charts');
                           newParams.delete('chartId');
@@ -494,7 +503,7 @@ const Dashboard = () => {
               Delete Match
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to delete the match <span className="font-semibold text-foreground">"{deleteMatchConfirm.matchName}"</span>? 
+              Are you sure you want to delete the match <span className="font-semibold text-foreground">"{deleteMatchConfirm.matchName}"</span>?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
