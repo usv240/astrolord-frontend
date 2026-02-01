@@ -17,53 +17,17 @@ export default defineConfig(() => ({
     },
   },
   build: {
-    // Enable minification with terser for better compression
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
-        passes: 2,
-      },
-      mangle: {
-        safari10: true,
-      },
-      format: {
-        comments: false,
-      },
-    },
+    // Use esbuild for faster, more reliable minification
+    minify: 'esbuild' as const,
     // Disable source maps for production
     sourcemap: false,
-    // Chunk splitting for better caching
+    // Simpler chunk splitting
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // More aggressive chunking for better caching
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
-            if (id.includes('@radix-ui')) {
-              return 'vendor-ui';
-            }
-            if (id.includes('recharts') || id.includes('d3')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('@tanstack')) {
-              return 'vendor-query';
-            }
-            if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) {
-              return 'vendor-markdown';
-            }
-            if (id.includes('axios') || id.includes('date-fns') || id.includes('clsx')) {
-              return 'vendor-utils';
-            }
-            // Other vendor modules
-            return 'vendor';
-          }
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-popover'],
         },
-        // Consistent chunk naming for better caching
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
@@ -73,11 +37,10 @@ export default defineConfig(() => ({
     chunkSizeWarningLimit: 1000,
     // Enable CSS code splitting
     cssCodeSplit: true,
-    // Target modern browsers for smaller bundles
+    // Target modern browsers
     target: 'es2020',
     // Compress assets
     assetsInlineLimit: 4096,
-    // Report compressed size
     reportCompressedSize: true,
   },
   // Optimize dependencies - include all frequently used deps to prevent 504 errors
@@ -105,7 +68,7 @@ export default defineConfig(() => ({
   },
   // Enable esbuild for faster transforms
   esbuild: {
-    legalComments: 'none',
+    legalComments: 'none' as const,
     treeShaking: true,
   },
 }));
