@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, Mail, CheckCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { createLogger } from '@/utils/logger';
 
@@ -13,8 +13,10 @@ const log = createLogger('ForgotPassword');
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,13 +24,30 @@ const ForgotPassword = () => {
     try {
       await authAPI.forgotPassword(email);
       setIsSubmitted(true);
-      toast.success('Reset link sent to your email (check console for dev mode)');
-    } catch (error) {
+      toast.success('Reset code sent to your email');
+    } catch (error: any) {
       log.error('Forgot password error', { error: String(error) });
-      toast.error('Failed to send reset link');
+      const errorMessage = error.response?.data?.detail || 'Failed to send reset instructions. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVerifyOtp = () => {
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+    // Navigate to reset password page with email and OTP pre-filled via state/context would be ideal,
+    // but for now we'll just navigate to the reset page where they can switch to OTP mode.
+    // Ideally we pass this state to the next route or use a callback.
+    // For a smoother UX, let's navigate to the reset page but in "OTP mode"
+    navigate('/reset-password');
+
+    // NOTE: Better UX would be to handle the OTP verification here or pass param.
+    // Since ResetPassword page handles the actual reset logic (new password entry),
+    // we should guide them there.
   };
 
   return (
@@ -49,30 +68,77 @@ const ForgotPassword = () => {
             Reset Password
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Enter your email to receive a reset link
+            {isSubmitted
+              ? "Check your email for the reset code"
+              : "Enter your email to receive a reset code"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isSubmitted ? (
-            <div className="text-center space-y-4">
-              <div className="p-4 bg-primary/10 rounded-lg text-primary">
-                Check your email for the reset link.
+            <div className="space-y-6">
+              {/* Success Info */}
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-4 py-2 rounded-full">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Code Sent Successfully</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  We sent a 6-digit code to <strong>{email}</strong>
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                (In development mode, check the backend terminal console for the link)
-              </p>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/login">Back to Login</Link>
-              </Button>
+
+              {/* OTP Entry Shortcut */}
+              <div className="bg-muted/30 rounded-lg p-5 border border-border/50 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp" className="text-center block">Enter OTP Code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="000000"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="text-center text-2xl tracking-[0.5em] font-mono h-12"
+                    maxLength={6}
+                  />
+                </div>
+                <Button
+                  className="w-full cosmic-glow"
+                  onClick={() => {
+                    // Since ResetPassword page needs to know we want to use OTP,
+                    // We can't easily pass state via simple link unless we use state param.
+                    // But simpler is to just let the user re-enter it there or 
+                    // update ResetPassword to accept query params for pre-filling.
+                    navigate(`/reset-password?email=${encodeURIComponent(email)}&otp=${otp}&mode=otp`);
+                  }}
+                  disabled={otp.length !== 6}
+                >
+                  Verify & Set New Password <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Alternative Options */}
+              <div className="text-center space-y-3 pt-2">
+                <div className="text-xs text-muted-foreground">
+                  Or click the link in the email we sent you
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSubmitted(false)}
+                  className="text-xs"
+                >
+                  Change email address
+                </Button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="cosmic@explorer.com"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -82,11 +148,19 @@ const ForgotPassword = () => {
               <Button
                 type="submit"
                 className="w-full cosmic-glow"
-                disabled={isLoading}
+                disabled={isLoading || !email}
               >
-                {isLoading ? 'Sending Link...' : 'Send Reset Link'}
+                {isLoading ? (
+                  <>
+                    <span className="animate-spin mr-2">⟳</span>
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Code'
+                )}
               </Button>
-              <div className="text-center">
+
+              <div className="text-center pt-2">
                 <Link to="/login" className="text-sm text-muted-foreground hover:text-primary flex items-center justify-center gap-2">
                   <ArrowLeft className="h-4 w-4" /> Back to Login
                 </Link>

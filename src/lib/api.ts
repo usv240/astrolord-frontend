@@ -73,6 +73,9 @@ export const authAPI = {
   resetPassword: (token: string, new_password: string) =>
     api.post('/auth/reset-password', { token, new_password }),
 
+  resetPasswordWithOTP: (email: string, otp: string, new_password: string) =>
+    api.post('/auth/reset-password-otp', { email, otp, new_password }),
+
   updateProfile: (data: { name?: string; email_preferences?: boolean }) =>
     authenticatedApi.put('/auth/profile', data),
 
@@ -213,6 +216,18 @@ export const adminAPI = {
 
   getUserSessions: (userId: string) =>
     authenticatedApi.get(`/admin/users/${userId}/sessions`),
+
+  // Live stats endpoint
+  getLiveStats: () =>
+    authenticatedApi.get('/admin/stats/live'),
+
+  // Token trends endpoint
+  getTokenTrends: (days: number = 30) =>
+    authenticatedApi.get('/admin/stats/token-trends', { params: { days } }),
+
+  // Performance analytics endpoint
+  getPerformanceAnalytics: (hours: number = 24) =>
+    authenticatedApi.get('/admin/stats/performance', { params: { hours } }),
 
   // Analytics endpoints
   getAnalyticsDashboard: (days: number = 30) =>

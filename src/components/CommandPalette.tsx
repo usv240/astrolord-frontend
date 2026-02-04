@@ -110,7 +110,7 @@ export const CommandPalette = memo(() => {
       id: 'charts',
       label: 'View My Charts',
       icon: <BarChart3 className="h-4 w-4" />,
-      action: () => navigate('/dashboard?tab=charts'),
+      action: () => navigate('/dashboard?tab=home'),
       keywords: ['charts', 'birth', 'horoscope'],
       shortcut: 'G C',
       group: 'navigation',
@@ -157,7 +157,7 @@ export const CommandPalette = memo(() => {
       id: 'create-chart',
       label: 'Create New Chart',
       icon: <Plus className="h-4 w-4" />,
-      action: () => navigate('/dashboard?tab=create'),
+      action: () => navigate('/dashboard?tab=home'),
       keywords: ['create', 'new', 'chart', 'add'],
       shortcut: 'C',
       group: 'actions',
@@ -241,7 +241,7 @@ export const CommandPalette = memo(() => {
 
   return (
     <>
-      {/* Keyboard hint (optional floating button) */}
+      {/* Keyboard hint button - currently hidden to avoid overlapping with chat input
       <button
         onClick={() => setOpen(true)}
         className="hidden lg:flex fixed bottom-6 right-6 items-center gap-2 px-3 py-2 bg-card/80 backdrop-blur-lg border border-border/50 rounded-lg shadow-lg hover:bg-card transition-colors z-40"
@@ -253,6 +253,7 @@ export const CommandPalette = memo(() => {
           <span className="text-xs">⌘</span>K
         </kbd>
       </button>
+      */}
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <Command className="rounded-lg border shadow-md">
@@ -272,8 +273,7 @@ export const CommandPalette = memo(() => {
                   <CommandItem
                     key={chart.chart_id}
                     value={`chart ${chart.name || 'Unnamed'} ${chart.dob}`}
-                    onSelect={() => runCommand(() => navigate(`/dashboard?tab=charts&chartId=${chart.chart_id}`))}
-                  >
+                    onSelect={() => runCommand(() => navigate(`/dashboard?tab=home&chartId=${chart.chart_id}`))}>
                     <Sparkles className="mr-2 h-4 w-4 text-primary" />
                     <span>{chart.name || 'Unnamed Chart'}</span>
                     <span className="ml-2 text-xs text-muted-foreground">{chart.dob}</span>
@@ -282,7 +282,7 @@ export const CommandPalette = memo(() => {
                 {charts.length > 5 && (
                   <CommandItem
                     value="view all charts"
-                    onSelect={() => runCommand(() => navigate('/dashboard?tab=charts'))}
+                    onSelect={() => runCommand(() => navigate('/dashboard?tab=home'))}
                   >
                     <BarChart3 className="mr-2 h-4 w-4" />
                     <span>View all {charts.length} charts...</span>

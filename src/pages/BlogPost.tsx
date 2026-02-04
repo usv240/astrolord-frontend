@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Clock, Calendar, User, BookOpen } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getBlogArticleBySlug, blogArticles } from '@/data/blogContent';
+import { useIsMobile } from '@/hooks/useMobileOptimized';
 
 // Custom markdown-like renderer for blog content
 const renderContent = (content: string) => {
@@ -45,11 +46,11 @@ const renderContent = (content: string) => {
         if (tableRows.length > 0) {
             elements.push(
                 <div key={key++} className="overflow-x-auto mb-8">
-                    <table className="w-full border-collapse">
+                    <table className="w-full border-collapse text-sm md:text-base">
                         <thead>
                             <tr className="bg-card/50">
                                 {tableHeaders.map((header, idx) => (
-                                    <th key={idx} className="p-3 text-left border border-border/50 font-semibold text-foreground">
+                                    <th key={idx} className="p-2 md:p-3 text-left border border-border/50 font-semibold text-foreground">
                                         {header}
                                     </th>
                                 ))}
@@ -61,7 +62,7 @@ const renderContent = (content: string) => {
                                     {row.map((cell, cellIdx) => (
                                         <td
                                             key={cellIdx}
-                                            className="p-3 border border-border/50 text-muted-foreground"
+                                            className="p-2 md:p-3 border border-border/50 text-muted-foreground"
                                             dangerouslySetInnerHTML={{ __html: processInlineFormatting(cell) }}
                                         />
                                     ))}
@@ -92,7 +93,7 @@ const renderContent = (content: string) => {
             flushList();
             flushTable();
             elements.push(
-                <h2 key={key++} className="text-2xl md:text-3xl font-bold mt-12 mb-6 pb-3 border-b border-border/50 text-foreground">
+                <h2 key={key++} className="text-xl md:text-2xl lg:text-3xl font-bold mt-8 md:mt-12 mb-4 md:mb-6 pb-2 md:pb-3 border-b border-border/50 text-foreground">
                     {trimmedLine.replace('## ', '')}
                 </h2>
             );
@@ -103,7 +104,7 @@ const renderContent = (content: string) => {
             flushList();
             flushTable();
             elements.push(
-                <h3 key={key++} className="text-xl md:text-2xl font-bold mt-8 mb-4 text-foreground">
+                <h3 key={key++} className="text-lg md:text-xl lg:text-2xl font-bold mt-6 md:mt-8 mb-3 md:mb-4 text-foreground">
                     {trimmedLine.replace('### ', '')}
                 </h3>
             );
@@ -114,7 +115,7 @@ const renderContent = (content: string) => {
             flushList();
             flushTable();
             elements.push(
-                <h4 key={key++} className="text-lg font-semibold mt-6 mb-3 text-foreground">
+                <h4 key={key++} className="text-base md:text-lg font-semibold mt-4 md:mt-6 mb-2 md:mb-3 text-foreground">
                     {trimmedLine.replace('#### ', '')}
                 </h4>
             );
@@ -125,7 +126,7 @@ const renderContent = (content: string) => {
         if (trimmedLine === '---') {
             flushList();
             flushTable();
-            elements.push(<hr key={key++} className="border-border/50 my-8" />);
+            elements.push(<hr key={key++} className="border-border/50 my-6 md:my-8" />);
             continue;
         }
 
@@ -184,7 +185,7 @@ const renderContent = (content: string) => {
         elements.push(
             <p
                 key={key++}
-                className="text-muted-foreground leading-relaxed mb-4"
+                className="text-sm md:text-base text-muted-foreground leading-relaxed mb-4"
                 dangerouslySetInnerHTML={{ __html: processInlineFormatting(trimmedLine) }}
             />
         );
@@ -200,6 +201,7 @@ const renderContent = (content: string) => {
 const BlogPost = () => {
     const { slug } = useParams<{ slug: string }>();
     const article = slug ? getBlogArticleBySlug(slug) : undefined;
+    const isMobile = useIsMobile();
 
     if (!article) {
         return <Navigate to="/blog" replace />;
@@ -218,85 +220,101 @@ const BlogPost = () => {
             </div>
 
             <div className="relative z-10">
-                <header className="container mx-auto px-4 py-6">
+                {/* Mobile-optimized header */}
+                <header className="container mx-auto px-4 py-4 md:py-6">
                     <nav className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                        {/* Left side - Back button and logo */}
+                        <div className="flex items-center gap-2 md:gap-4">
                             <Link to="/blog">
-                                <Button variant="ghost" size="sm" className="gap-2">
+                                <Button variant="ghost" size={isMobile ? "icon" : "sm"} className={isMobile ? "h-9 w-9" : "gap-2"}>
                                     <ArrowLeft className="h-4 w-4" />
-                                    Back to Blog
+                                    {!isMobile && "Back to Blog"}
                                 </Button>
                             </Link>
-                            <Link to="/">
-                                <img
-                                    src="/logo.png"
-                                    alt="AstroLord"
-                                    className="h-10 w-auto hover:opacity-80 transition-opacity"
-                                />
-                            </Link>
+                            {!isMobile && (
+                                <Link to="/">
+                                    <img
+                                        src="/logo.png"
+                                        alt="AstroLord"
+                                        className="h-10 w-auto hover:opacity-80 transition-opacity"
+                                    />
+                                </Link>
+                            )}
                         </div>
-                        <div className="flex gap-3">
+
+                        {/* Right side - Actions */}
+                        <div className="flex items-center gap-2 md:gap-3">
                             <ThemeToggle />
-                            <Button variant="outline" asChild className="border-border/50">
-                                <Link to="/login">Sign In</Link>
-                            </Button>
-                            <Button asChild className="cosmic-glow">
-                                <Link to="/register">Get Started</Link>
-                            </Button>
+                            {isMobile ? (
+                                <Button asChild size="sm" className="cosmic-glow text-sm px-3">
+                                    <Link to="/register">Get Started</Link>
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button variant="outline" asChild className="border-border/50">
+                                        <Link to="/login">Sign In</Link>
+                                    </Button>
+                                    <Button asChild className="cosmic-glow">
+                                        <Link to="/register">Get Started</Link>
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </nav>
                 </header>
 
-                <main className="container mx-auto px-6 py-12">
+                <main className="container mx-auto px-4 md:px-6 py-6 md:py-12">
                     <article className="max-w-4xl mx-auto">
                         {/* Article Header */}
-                        <div className="text-center mb-12">
-                            <div className="text-6xl mb-6">{article.image}</div>
-                            <span className="inline-block text-sm font-semibold text-primary px-3 py-1 rounded-full bg-primary/10 mb-4">
+                        <div className="text-center mb-8 md:mb-12">
+                            <div className="text-5xl md:text-6xl mb-4 md:mb-6">{article.image}</div>
+                            <span className="inline-block text-xs md:text-sm font-semibold text-primary px-3 py-1 rounded-full bg-primary/10 mb-3 md:mb-4">
                                 {article.category}
                             </span>
-                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 bg-gradient-to-r from-primary via-secondary to-accent text-transparent bg-clip-text leading-tight">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-primary via-secondary to-accent text-transparent bg-clip-text leading-tight px-2">
                                 {article.title}
                             </h1>
-                            <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-3xl mx-auto">
+                            <p className="text-base md:text-lg lg:text-xl text-muted-foreground mb-4 md:mb-6 max-w-3xl mx-auto px-2">
                                 {article.excerpt}
                             </p>
-                            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
+                            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1 md:gap-2">
+                                    <Calendar className="h-3 w-3 md:h-4 md:w-4" />
                                     {article.date}
                                 </span>
-                                <span className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
+                                <span className="flex items-center gap-1 md:gap-2">
+                                    <Clock className="h-3 w-3 md:h-4 md:w-4" />
                                     {article.readTime}
                                 </span>
-                                <span className="flex items-center gap-2">
-                                    <User className="h-4 w-4" />
-                                    {article.author}
-                                </span>
+                                {!isMobile && (
+                                    <span className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        {article.author}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
                         {/* Article Content */}
-                        <div className="p-6 md:p-10 rounded-lg bg-card/30 backdrop-blur-sm border border-border/50">
+                        <div className="p-4 md:p-6 lg:p-10 rounded-lg bg-card/30 backdrop-blur-sm border border-border/50">
                             {renderContent(article.content)}
                         </div>
 
                         {/* CTA Section */}
-                        <div className="mt-16 p-8 rounded-lg bg-gradient-to-br from-accent/20 to-purple-500/20 backdrop-blur-sm border border-accent/30 text-center">
-                            <h3 className="text-2xl font-bold mb-4">Ready to Explore Your Chart?</h3>
-                            <p className="text-muted-foreground mb-6">
+                        <div className="mt-10 md:mt-16 p-5 md:p-8 rounded-lg bg-gradient-to-br from-accent/20 to-purple-500/20 backdrop-blur-sm border border-accent/30 text-center">
+                            <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Ready to Explore Your Chart?</h3>
+                            <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 px-2">
                                 Get your accurate Vedic birth chart and chat with our AI astrologer for personalized insights.
                             </p>
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
                                 <Link to="/register">
-                                    <Button size="lg" className="cosmic-glow">
+                                    <Button size={isMobile ? "default" : "lg"} className="cosmic-glow w-full sm:w-auto">
                                         Get Started Free
                                     </Button>
                                 </Link>
                                 <Link to="/learn">
-                                    <Button size="lg" variant="outline">
-                                        <BookOpen className="h-5 w-5 mr-2" />
+                                    <Button size={isMobile ? "default" : "lg"} variant="outline" className="w-full sm:w-auto">
+                                        <BookOpen className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} mr-2`} />
                                         Learn More
                                     </Button>
                                 </Link>
@@ -305,20 +323,20 @@ const BlogPost = () => {
 
                         {/* Related Articles */}
                         {relatedArticles.length > 0 && (
-                            <div className="mt-16">
-                                <h3 className="text-2xl font-bold mb-6">Related Articles</h3>
-                                <div className="grid md:grid-cols-3 gap-6">
+                            <div className="mt-10 md:mt-16">
+                                <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Related Articles</h3>
+                                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
                                     {relatedArticles.map((related) => (
                                         <Link
                                             key={related.id}
                                             to={`/blog/${related.slug}`}
-                                            className="p-6 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all group"
+                                            className="p-4 md:p-6 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all group"
                                         >
-                                            <div className="text-4xl mb-4">{related.image}</div>
-                                            <h4 className="font-bold mb-2 group-hover:text-primary transition-colors">
+                                            <div className="text-3xl md:text-4xl mb-3 md:mb-4">{related.image}</div>
+                                            <h4 className="text-sm md:text-base font-bold mb-2 group-hover:text-primary transition-colors">
                                                 {related.title}
                                             </h4>
-                                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                            <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                                                 {related.excerpt}
                                             </p>
                                         </Link>
@@ -334,3 +352,4 @@ const BlogPost = () => {
 };
 
 export default BlogPost;
+

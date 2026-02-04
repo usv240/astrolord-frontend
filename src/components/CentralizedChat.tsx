@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Send,
   Sparkles,
@@ -12,6 +13,8 @@ import {
   Loader2,
   Brain,
   MessageCircle,
+  Info,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -43,6 +46,109 @@ const ANALYZING_MESSAGES = Object.freeze([
   'Calculating your astrological transits...',
 ]);
 
+// Topic categories with example questions
+const TOPIC_QUESTIONS = {
+  career: {
+    label: '💼 Career',
+    color: 'bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20',
+    questions: [
+      'Should I change my job this year?',
+      'Will my business succeed?',
+      'When will I get promoted?',
+      'Am I suited for government jobs?',
+      'Should I start my own company?',
+    ],
+  },
+  love: {
+    label: '💕 Love',
+    color: 'bg-pink-500/10 border-pink-500/20 text-pink-400 hover:bg-pink-500/20',
+    questions: [
+      'When will I find my life partner?',
+      'Is my current relationship going to last?',
+      'Why do my relationships keep failing?',
+      'Will I have an arranged or love marriage?',
+      'Is there any delay in my marriage?',
+    ],
+  },
+  health: {
+    label: '💪 Health',
+    color: 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20',
+    questions: [
+      'Any chronic health issues I should know?',
+      'Why am I always feeling low energy?',
+      'When will my health problems improve?',
+      'What body parts are weak in my chart?',
+      'Am I prone to accidents or surgeries?',
+    ],
+  },
+  wealth: {
+    label: '💰 Wealth',
+    color: 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20',
+    questions: [
+      'Will I ever be financially stable?',
+      'When is a good time to invest in property?',
+      'Why does money slip through my fingers?',
+      'Will I get ancestral property?',
+      'Am I destined for wealth or struggle?',
+    ],
+  },
+  timing: {
+    label: '⏱️ Timing',
+    color: 'bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20',
+    questions: [
+      'What is my current Dasha period?',
+      'When will my bad phase end?',
+      'Is this a good year for big decisions?',
+      'What are the next 2 years like for me?',
+      'When will Saturn\'s influence reduce?',
+    ],
+  },
+  remedies: {
+    label: '🌿 Remedies',
+    color: 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20',
+    questions: [
+      'What gemstone should I wear?',
+      'Which day is lucky for me?',
+      'What mantras help my weak planets?',
+      'Should I do any fasting or pooja?',
+      'How can I reduce Rahu-Ketu effects?',
+    ],
+  },
+  family: {
+    label: '👨‍👩‍👧 Family',
+    color: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20',
+    questions: [
+      'Will I have children? When?',
+      'Why is there conflict with my parents?',
+      'How is my relationship with in-laws?',
+      'Will my child be successful?',
+      'Any family disputes in my chart?',
+    ],
+  },
+  travel: {
+    label: '✈️ Travel',
+    color: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20',
+    questions: [
+      'Will I get to settle abroad?',
+      'Any visa or immigration success?',
+      'Is relocation good for my career?',
+      'When can I plan foreign travel?',
+      'Which direction is lucky for me?',
+    ],
+  },
+  education: {
+    label: '📚 Studies',
+    color: 'bg-orange-500/10 border-orange-500/20 text-orange-400 hover:bg-orange-500/20',
+    questions: [
+      'Will I pass my exams this time?',
+      'Should I pursue higher studies abroad?',
+      'What subjects suit me best?',
+      'Will I get into a good college?',
+      'Is competitive exam success possible?',
+    ],
+  },
+} as const;
+
 export interface ChatMessage {
   id?: string;
   role: 'user' | 'assistant';
@@ -57,20 +163,20 @@ export interface ChatMessage {
 // Helper function to format relative time
 const formatRelativeTime = (timestamp: string | Date | undefined): string => {
   if (!timestamp) return '';
-  
+
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  
+
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays === 1) return 'yesterday';
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
@@ -126,9 +232,9 @@ const CentralizedChat = ({
   focusModes = [],
   activeFocusTags = [],
   showFormatting = true,
-  cardClassName = '',
+  cardClassName = 'w-full',
   scrollHeight = 'h-[500px]',
-  maxWidth = 'max-w-[80%]',
+  maxWidth = 'max-w-[95%] md:max-w-[80%]',  // Wider on mobile, narrower on desktop
   compactHeader = false,
   isRateLimited = false,
   rateLimitCountdown = '',
@@ -136,6 +242,8 @@ const CentralizedChat = ({
   const [selectedAnalysis, setSelectedAnalysis] = useState<string | null>(null);
   const [analyzingMessageIndex, setAnalyzingMessageIndex] = useState(0);
   const [hasSeenSuggestions, setHasSeenSuggestions] = useState(false);
+  const [showTopics, setShowTopics] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<keyof typeof TOPIC_QUESTIONS | null>(null);
   const [feedbackModal, setFeedbackModal] = useState<{
     isOpen: boolean;
     messageIndex: number | null;
@@ -240,18 +348,81 @@ const CentralizedChat = ({
   }, [feedbackModal, onSubmitFeedback, setMessages]);
 
   return (
-    <Card className={`border-primary/20 bg-card/40 backdrop-blur-sm ${cardClassName}`}>
-      <CardHeader>
+    <Card className={`border-primary/20 bg-card/40 backdrop-blur-sm overflow-hidden ${cardClassName}`}>
+      <CardHeader className="py-1 px-2 md:py-2 md:px-4 shrink-0">
         <div className={compactHeader ? "flex flex-row items-center justify-between w-full" : "flex flex-col w-full"}>
           {!compactHeader ? (
             <div className="space-y-1">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Ask about this
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Have questions? Ask the AI Astrologer.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+                  Your AI Astrologer
+                </CardTitle>
+                <button
+                  onClick={() => setShowTopics(!showTopics)}
+                  className={`flex items-center gap-1.5 text-[10px] md:text-xs px-2.5 py-1 rounded-full transition-all duration-200 ${showTopics
+                    ? 'bg-primary/20 text-primary border border-primary/30'
+                    : 'bg-primary/10 text-primary/80 border border-primary/20 hover:bg-primary/20 hover:text-primary'
+                    }`}
+                >
+                  <span>💡</span>
+                  <span>Topics</span>
+                  <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showTopics ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+              {/* Expandable Topics Section */}
+              {showTopics && (
+                <div className="animate-in slide-in-from-top-2 fade-in duration-200 mt-2 p-2 md:p-3 rounded-lg bg-primary/5 border border-primary/10">
+                  {!selectedTopic ? (
+                    <>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mb-2">Click a topic to see questions:</p>
+                      <div className="flex flex-wrap gap-1.5 text-[10px] md:text-xs">
+                        {(Object.keys(TOPIC_QUESTIONS) as Array<keyof typeof TOPIC_QUESTIONS>).map((topicKey) => (
+                          <button
+                            key={topicKey}
+                            onClick={() => setSelectedTopic(topicKey)}
+                            className={`px-2 py-0.5 rounded-full border cursor-pointer transition-all duration-150 hover:scale-105 ${TOPIC_QUESTIONS[topicKey].color}`}
+                          >
+                            {TOPIC_QUESTIONS[topicKey].label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setSelectedTopic(null)}
+                            className="text-[10px] md:text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            ← Back
+                          </button>
+                          <span className={`px-2 py-0.5 rounded-full border text-[10px] md:text-xs ${TOPIC_QUESTIONS[selectedTopic].color}`}>
+                            {TOPIC_QUESTIONS[selectedTopic].label}
+                          </span>
+                        </div>
+                        <span className="text-[9px] md:text-[10px] text-muted-foreground/70">👆 Click to ask</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                        {TOPIC_QUESTIONS[selectedTopic].questions.map((question, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              onSendMessage(question);
+                              setShowTopics(false);
+                              setSelectedTopic(null);
+                            }}
+                            className="text-left text-[10px] md:text-[11px] px-2 py-1.5 rounded bg-background/50 hover:bg-primary/10 border border-border/30 hover:border-primary/40 transition-all duration-100 truncate"
+                          >
+                            {question}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground/80">
@@ -262,21 +433,53 @@ const CentralizedChat = ({
 
           {/* Focus Modes */}
           {showFocusModes && focusModes.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {focusModes.map((mode) => (
-                <Button
-                  key={mode.id}
-                  variant="outline"
-                  size="sm"
-                  className={`text-xs h-7 border transition-all duration-200 ${mode.color} ${focusMode === mode.id
-                    ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-                    : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
-                    }`}
-                  onClick={() => onFocusModeChange?.(mode.id)}
-                >
-                  {mode.label}
-                </Button>
-              ))}
+            <div className="space-y-1.5 md:space-y-2 pt-1 md:pt-2">
+              {/* Mobile: Dropdown for focus modes */}
+              <div className="md:hidden space-y-1.5">
+                <p className="text-[11px] text-muted-foreground/80">
+                  💡 Tap a focus mode — e.g., <strong>Career</strong> for job guidance,
+                  <strong>Love</strong> for relationships.
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground/80 font-medium">Focus:</span>
+                  <Select value={focusMode} onValueChange={(value) => onFocusModeChange?.(value)}>
+                    <SelectTrigger className="h-7 text-xs flex-1 bg-card/60 border-primary/20">
+                      <SelectValue placeholder="Select focus mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {focusModes.map((mode) => (
+                        <SelectItem key={mode.id} value={mode.id} className="text-xs">
+                          {mode.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Desktop: Button grid */}
+              <div className="hidden md:block">
+                <p className="text-xs text-muted-foreground/80 mb-2">
+                  💡 Tap a focus mode — e.g., <strong>Career</strong> for job guidance,
+                  <strong>Love</strong> for relationships.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {focusModes.map((mode) => (
+                    <Button
+                      key={mode.id}
+                      variant="outline"
+                      size="sm"
+                      className={`text-xs h-7 px-3 border transition-all duration-200 ${mode.color} ${focusMode === mode.id
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                        : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
+                      onClick={() => onFocusModeChange?.(mode.id)}
+                    >
+                      {mode.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -310,9 +513,9 @@ const CentralizedChat = ({
         </div>
       </CardHeader>
 
-      <CardContent className="p-0">
+      <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
         <ScrollArea
-          className={`${scrollHeight} w-full rounded-lg border border-primary/10 bg-background/40 p-4`}
+          className={`flex-1 min-h-0 w-full rounded-lg border border-primary/10 bg-background/40 p-1 md:p-4 mx-1 md:mx-2`}
         >
           {hasMore && (
             <div className="flex justify-center mb-4">
@@ -356,60 +559,12 @@ const CentralizedChat = ({
               <div className="flex-1 overflow-y-auto">
                 {messages.map((message, index) => (
                   <div key={index} className="space-y-2">
-                    <div
-                      className={`flex items-start gap-2 group ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                        }`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="flex flex-col gap-1 mt-1 shrink-0">
-                          {message.analysis && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-50 hover:opacity-100"
-                              onClick={() => setSelectedAnalysis(message.analysis || null)}
-                              title="View Analysis Logic"
-                            >
-                              <ChartBar className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {message.id && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-6 w-6 ${message.feedback === 'like'
-                                  ? 'text-green-500 opacity-100'
-                                  : 'opacity-50 hover:opacity-100'
-                                  }`}
-                                onClick={() => openFeedbackModal(index, 1)}
-                                disabled={!!message.feedback}
-                                title="Helpful"
-                              >
-                                <ThumbsUp className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-6 w-6 ${message.feedback === 'dislike'
-                                  ? 'text-red-500 opacity-100'
-                                  : 'opacity-50 hover:opacity-100'
-                                  }`}
-                                onClick={() => openFeedbackModal(index, -1)}
-                                disabled={!!message.feedback}
-                                title="Not Helpful"
-                              >
-                                <ThumbsDown className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      )}
-
+                    {/* Message bubble - full width for assistant, right-aligned for user */}
+                    <div className={`${message.role === 'user' ? 'flex justify-end' : ''}`}>
                       <div
-                        className={`${maxWidth} rounded-lg p-3 text-sm ${message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-card/60 border border-primary/10 text-foreground'
+                        className={`rounded-lg p-2 md:p-3 text-sm ${message.role === 'user'
+                          ? `${maxWidth} bg-primary text-primary-foreground`
+                          : 'w-full bg-card/60 border border-primary/10 text-foreground'
                           }`}
                       >
                         {message.role === 'user' ? (
@@ -422,29 +577,74 @@ const CentralizedChat = ({
                           </div>
                         )}
                         {message.timestamp && (
-                          <span className={`text-[10px] mt-1.5 block ${
-                            message.role === 'user' 
-                              ? 'text-primary-foreground/60' 
-                              : 'text-muted-foreground/60'
-                          }`}>
+                          <span className={`text-[10px] mt-1.5 block ${message.role === 'user'
+                            ? 'text-primary-foreground/60'
+                            : 'text-muted-foreground/60'
+                            }`}>
                             {formatRelativeTime(message.timestamp)}
                           </span>
                         )}
-                      </div>
 
-                      {message.role === 'assistant' && message.id && (
-                        <MessageActions
-                          content={message.content}
-                          messageId={message.id}
-                          onSave={() => {
-                            setMessages((prev) =>
-                              prev.map((msg, idx) =>
-                                idx === index ? { ...msg, isSaved: !msg.isSaved } : msg,
-                              ),
-                            );
-                          }}
-                        />
-                      )}
+                        {/* Action buttons inside assistant message bubble */}
+                        {message.role === 'assistant' && (
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-primary/10">
+                            {message.analysis && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-50 hover:opacity-100"
+                                onClick={() => setSelectedAnalysis(message.analysis || null)}
+                                title="View Analysis Logic"
+                              >
+                                <ChartBar className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {message.id && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-6 w-6 ${message.feedback === 'like'
+                                    ? 'text-green-500 opacity-100'
+                                    : 'opacity-50 hover:opacity-100'
+                                    }`}
+                                  onClick={() => openFeedbackModal(index, 1)}
+                                  disabled={!!message.feedback}
+                                  title="Helpful"
+                                >
+                                  <ThumbsUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-6 w-6 ${message.feedback === 'dislike'
+                                    ? 'text-red-500 opacity-100'
+                                    : 'opacity-50 hover:opacity-100'
+                                    }`}
+                                  onClick={() => openFeedbackModal(index, -1)}
+                                  disabled={!!message.feedback}
+                                  title="Not Helpful"
+                                >
+                                  <ThumbsDown className="h-3 w-3" />
+                                </Button>
+                              </>
+                            )}
+                            {message.id && (
+                              <MessageActions
+                                content={message.content}
+                                messageId={message.id}
+                                onSave={() => {
+                                  setMessages((prev) =>
+                                    prev.map((msg, idx) =>
+                                      idx === index ? { ...msg, isSaved: !msg.isSaved } : msg,
+                                    ),
+                                  );
+                                }}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Suggestions */}
@@ -503,7 +703,7 @@ const CentralizedChat = ({
           )}
         </ScrollArea>
 
-        {/* Quick Action Buttons */}
+        {/* Quick Action Buttons - COMMENTED OUT to reduce clutter
         {messages.length > 0 && !isLoading && (
           <div className="flex gap-1.5 px-3 pt-2 pb-1 overflow-x-auto scrollbar-hide">
             <Button
@@ -548,8 +748,9 @@ const CentralizedChat = ({
             </Button>
           </div>
         )}
+        */}
 
-        <form onSubmit={handleSendMessage} className="flex flex-col gap-2 p-3 border-t border-primary/10">
+        <form onSubmit={handleSendMessage} className="flex flex-col gap-2 p-3 border-t border-primary/10 shrink-0 bg-card/80">
           {/* Rate limit warning */}
           {isRateLimited && rateLimitCountdown && (
             <div className="flex items-center gap-2 text-xs text-warning bg-warning/10 px-3 py-1.5 rounded-md border border-warning/20">
@@ -557,7 +758,7 @@ const CentralizedChat = ({
               <span>Rate limited - you can send another message in <strong>{rateLimitCountdown}</strong></span>
             </div>
           )}
-          
+
           <div className="flex gap-2">
             <Input
               value={input}
@@ -566,10 +767,10 @@ const CentralizedChat = ({
               disabled={isLoading || isRateLimited}
               className="bg-background/50 border-primary/20 text-sm flex-1"
             />
-            <Button 
-              type="submit" 
-              size="sm" 
-              disabled={isLoading || isRateLimited || !input.trim()} 
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isLoading || isRateLimited || !input.trim()}
               className="px-3 cosmic-glow btn-press"
             >
               {isLoading ? (
@@ -591,11 +792,22 @@ const CentralizedChat = ({
               Astrological Reasoning
             </DialogTitle>
             <DialogDescription>
-              The internal logic used to generate this response.
+              The astrological analysis behind this response.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 p-4 bg-muted rounded-md font-mono text-xs whitespace-pre-wrap">
-            {selectedAnalysis}
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-primary/10">
+            {selectedAnalysis && (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <MessageFormatter
+                  content={selectedAnalysis
+                    .replace(/\\n/g, '\n')
+                    .replace(/^\s*\n/gm, '\n')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim()
+                  }
+                />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -623,17 +835,17 @@ const CentralizedChat = ({
               )}
             </div>
             <DialogTitle className="text-xl">
-              {feedbackModal.score === 1 
-                ? "Glad that helped!" 
-                : feedbackModal.score === -1 
-                  ? "Sorry about that" 
+              {feedbackModal.score === 1
+                ? "Glad that helped!"
+                : feedbackModal.score === -1
+                  ? "Sorry about that"
                   : "How was this response?"}
             </DialogTitle>
             <DialogDescription>
-              {feedbackModal.score === 1 
-                ? "Your feedback helps us make the AI astrologer even better." 
-                : feedbackModal.score === -1 
-                  ? "Help us understand what went wrong so we can improve." 
+              {feedbackModal.score === 1
+                ? "Your feedback helps us make the AI astrologer even better."
+                : feedbackModal.score === -1
+                  ? "Help us understand what went wrong so we can improve."
                   : "Let us know if this insight was useful."}
             </DialogDescription>
           </DialogHeader>
@@ -642,42 +854,40 @@ const CentralizedChat = ({
               <Button
                 variant={feedbackModal.score === 1 ? 'default' : 'outline'}
                 onClick={() => updateFeedbackScore(1)}
-                className={`gap-2 flex-1 max-w-[140px] transition-all ${
-                  feedbackModal.score === 1 
-                    ? 'bg-green-500 hover:bg-green-600 border-green-500' 
-                    : 'hover:border-green-500 hover:text-green-500'
-                }`}
+                className={`gap-2 flex-1 max-w-[140px] transition-all ${feedbackModal.score === 1
+                  ? 'bg-green-500 hover:bg-green-600 border-green-500'
+                  : 'hover:border-green-500 hover:text-green-500'
+                  }`}
               >
                 <ThumbsUp className="h-4 w-4" /> Helpful
               </Button>
               <Button
                 variant={feedbackModal.score === -1 ? 'destructive' : 'outline'}
                 onClick={() => updateFeedbackScore(-1)}
-                className={`gap-2 flex-1 max-w-[140px] transition-all ${
-                  feedbackModal.score === -1 
-                    ? '' 
-                    : 'hover:border-destructive hover:text-destructive'
-                }`}
+                className={`gap-2 flex-1 max-w-[140px] transition-all ${feedbackModal.score === -1
+                  ? ''
+                  : 'hover:border-destructive hover:text-destructive'
+                  }`}
               >
                 <ThumbsDown className="h-4 w-4" /> Not Helpful
               </Button>
             </div>
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">
-                {feedbackModal.score === 1 
-                  ? "What did you find most useful? (optional)" 
-                  : feedbackModal.score === -1 
-                    ? "What could have been better? (optional)" 
+                {feedbackModal.score === 1
+                  ? "What did you find most useful? (optional)"
+                  : feedbackModal.score === -1
+                    ? "What could have been better? (optional)"
                     : "Additional comments (optional)"}
               </Label>
               <Textarea
                 value={feedbackModal.comment}
                 onChange={(e) => updateFeedbackComment(e.target.value)}
                 placeholder={
-                  feedbackModal.score === 1 
-                    ? "The prediction was accurate, the advice was helpful..." 
-                    : feedbackModal.score === -1 
-                      ? "The information seemed incorrect, I needed more details..." 
+                  feedbackModal.score === 1
+                    ? "The prediction was accurate, the advice was helpful..."
+                    : feedbackModal.score === -1
+                      ? "The information seemed incorrect, I needed more details..."
                       : "Share your thoughts..."
                 }
                 className="min-h-[80px] resize-none"
@@ -692,7 +902,7 @@ const CentralizedChat = ({
             >
               Skip
             </Button>
-            <Button 
+            <Button
               onClick={submitFeedback}
               disabled={feedbackModal.score === null}
               className="cosmic-glow"

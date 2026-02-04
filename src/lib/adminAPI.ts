@@ -271,6 +271,16 @@ const adminAPI = {
 
   deletePricingOverride: (productKey: string, countryCode: string) =>
     authenticatedApi.delete(`/admin/pricing/overrides/${productKey}/${countryCode}`),
+
+  // Email Management Endpoints
+  getEmailStatus: () =>
+    authenticatedApi.get('/admin/email/status'),
+
+  resendWelcomeEmail: (userId: string) =>
+    authenticatedApi.post(`/admin/email/resend/${userId}`),
+
+  resendAllWelcomeEmails: () =>
+    authenticatedApi.post('/admin/email/resend-all'),
 };
 
 export default adminAPI;

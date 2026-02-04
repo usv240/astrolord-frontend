@@ -1,10 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Plus,
   MessageSquare,
   Heart,
-  Sparkles,
   Home,
   LogOut,
   Crown,
@@ -12,6 +10,7 @@ import {
   BarChart3,
   Timer,
   Rocket,
+  Sparkles,
 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useQuota } from '@/hooks/useQuota';
@@ -44,10 +43,8 @@ export const DashboardNav = ({ activeTab, onTabChange, onLogout }: DashboardNavP
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'charts', label: 'My Charts', icon: Sparkles },
-    { id: 'create', label: 'Create', icon: Plus, highlight: true },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'relationship', label: 'Relationship', icon: Heart },
+    { id: 'relationship', label: 'Match', icon: Heart },
     { id: 'roadmap', label: 'Roadmap', icon: Rocket, isLink: true, href: '/roadmap' },
   ];
 
@@ -85,18 +82,13 @@ export const DashboardNav = ({ activeTab, onTabChange, onLogout }: DashboardNavP
               key={item.id}
               onClick={() => onTabChange(item.id)}
               variant={isActive ? 'default' : 'ghost'}
-              className={`w-full justify-start relative transition-all duration-200 ${
-                item.highlight && !isActive ? 'border border-primary/30 hover:bg-primary/10' : ''
-              } ${isActive ? 'cosmic-glow bg-primary' : 'hover:translate-x-1'}`}
+              className={`w-full justify-start relative transition-all duration-200 ${isActive ? 'cosmic-glow bg-primary' : 'hover:translate-x-1'}`}
             >
               {isActive && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-r-full -ml-[1px]" />
               )}
               <Icon className={`h-4 w-4 mr-2 shrink-0 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
               <span className="flex-1 text-left">{item.label}</span>
-              {item.highlight && !isActive && (
-                <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-              )}
             </Button>
           );
         })}

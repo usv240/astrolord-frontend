@@ -231,7 +231,7 @@ const FeatureCard = memo(({ feature }: { feature: Feature }) => {
   return (
     <Card className={`group relative overflow-hidden border-border/50 bg-gradient-to-br ${gradient} hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10`}>
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
-      
+
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -244,7 +244,7 @@ const FeatureCard = memo(({ feature }: { feature: Feature }) => {
         <CardTitle className="text-lg mt-3">{feature.title}</CardTitle>
         <CardDescription className="text-sm">{feature.description}</CardDescription>
       </CardHeader>
-      
+
       <CardContent className="pt-0">
         {feature.highlights && (
           <ul className="space-y-1.5 mb-4">
@@ -256,7 +256,7 @@ const FeatureCard = memo(({ feature }: { feature: Feature }) => {
             ))}
           </ul>
         )}
-        
+
         {feature.eta && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/50">
             <Clock className="h-3 w-3" />
@@ -295,20 +295,20 @@ const ComingSoon = memo(() => {
         </Button>
 
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Rocket className="h-4 w-4 text-primary animate-bounce" />
             <span className="text-sm font-medium text-primary">Roadmap</span>
           </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">
             <span className="bg-gradient-to-r from-primary via-purple-400 to-secondary bg-clip-text text-transparent">
               What's Coming Next
             </span>
           </h1>
-          
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            We're constantly working to bring you new features and improvements. 
+
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+            We're constantly working to bring you new features and improvements.
             Here's a glimpse of what's on our cosmic roadmap.
           </p>
 

@@ -3,18 +3,55 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
 
   <!-- Critical inline CSS for initial load - prevents layout shift -->
   <style>
     /* Critical CSS for initial render */
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: #0a0a12; color: #e5e5f0; font-family: system-ui, -apple-system, sans-serif; }
-    #root { min-height: 100vh; }
-    .initial-loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 1rem; }
-    .initial-loader .spinner { width: 32px; height: 32px; border: 3px solid #6366f1; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .initial-loader p { color: #8a8a9e; font-size: 0.875rem; }
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: #0a0a12;
+      color: #e5e5f0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .initial-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .initial-loader .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #6366f1;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .initial-loader p {
+      color: #8a8a9e;
+      font-size: 0.875rem;
+    }
   </style>
 
   <!-- Primary Meta Tags -->
@@ -66,16 +103,16 @@
     </div>
   </div>
   <script type="module" src="/src/main.tsx"></script>
-  
+
   <!-- Defer Google Analytics loading until after page load -->
   <script>
-    window.addEventListener('load', function() {
-      setTimeout(function() {
+    window.addEventListener('load', function () {
+      setTimeout(function () {
         var s = document.createElement('script');
         s.src = 'https://www.googletagmanager.com/gtag/js?id=G-8LTTZHTG43';
         s.async = true;
         document.head.appendChild(s);
-        s.onload = function() {
+        s.onload = function () {
           window.dataLayer = window.dataLayer || [];
           function gtag() { dataLayer.push(arguments); }
           gtag('js', new Date());

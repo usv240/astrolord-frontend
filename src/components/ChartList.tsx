@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { chartAPI } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star, AlertTriangle, Copy, Check, RotateCcw } from 'lucide-react';
+import { Calendar, Clock, MapPin, Eye, X, Globe, Navigation, MessageSquare, Sparkles, Trash2, Star, AlertTriangle, Copy, Check, RotateCcw, FileText, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { ChartBundle } from '@/types/chart';
+import { ChartBundle, getZodiacSign } from '@/types/chart';
 import { DailyCosmicChat } from './DailyCosmicChat';
 import DailyTransits from './DailyTransits'; // Keep for now if needed, or remove
 import { PDFReportCard } from './PDFReportCard';
@@ -49,7 +49,7 @@ const ChartList = ({
   onCreateNew,
   refreshTrigger,
 }: {
-  onSelectChart?: (chartId: string) => void;
+  onSelectChart?: (chartId: string, mode?: 'analysis' | 'daily') => void;
   activeChartId?: string;
   initialViewMode?: string;
   onViewModeChange?: (mode: string | null) => void;
@@ -63,7 +63,7 @@ const ChartList = ({
   const [isLoading, setIsLoading] = useState(true);
   const [selectedChart, setSelectedChart] = useState<ChartBundle | null>(null);
   const [isLoadingBundle, setIsLoadingBundle] = useState(false);
-  const [showDailyForecast, setShowDailyForecast] = useState(false);
+  const [showPDFReport, setShowPDFReport] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; chartId: string | null; chartName: string }>({
     open: false,
     chartId: null,
@@ -93,12 +93,6 @@ const ChartList = ({
     itemType: 'chart',
     getItemName: (chart) => chart.name || 'Unnamed Chart',
   });
-
-  useEffect(() => {
-    if (initialViewMode === 'daily') {
-      setShowDailyForecast(true);
-    }
-  }, [initialViewMode]);
 
   useEffect(() => {
     loadCharts();
@@ -134,11 +128,7 @@ const ChartList = ({
     try {
       const response = await chartAPI.getChartBundle(chartId);
       setSelectedChart(response.data);
-      // Only reset views if we are NOT in a specific mode from URL
-      if (!initialViewMode) {
-        setShowDailyForecast(false);
-      }
-      // toast.success('Chart loaded successfully'); // Optional, maybe too noisy on auto-load
+      setShowPDFReport(false);
     } catch (error: any) {
       toast.error('Failed to load chart details');
       log.error('Failed to load chart details', { error: error.message });
@@ -182,8 +172,10 @@ const ChartList = ({
     }
   };
 
+  // Single handler for chat - opens mode selector
   const handleChatClick = () => {
     if (selectedChart && onSelectChart) {
+      // Pass chart ID - the mode selector will handle mode selection
       onSelectChart(selectedChart.chart_id);
     }
   };
@@ -280,7 +272,7 @@ const ChartList = ({
 
       {/* Main Content */}
       {!selectedChart ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredCharts.map((chart) => (
             <Card
               key={chart.chart_id}
@@ -352,7 +344,7 @@ const ChartList = ({
                     disabled={isLoadingBundle}
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    {isLoadingBundle ? 'Loading...' : 'View Cosmic Details'}
+                    {isLoadingBundle ? 'Loading...' : 'View Details'}
                   </Button>
                   <Button
                     onClick={(e) => {
@@ -398,113 +390,209 @@ const ChartList = ({
               <div className="flex gap-2">
                 <Skeleton className="h-9 w-9 rounded-full" />
                 <Skeleton className="h-9 w-32" />
-                <Skeleton className="h-9 w-28" />
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-6">
             <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-32 w-full" />
           </CardContent>
         </Card>
       ) : (
+        /* Enhanced Chart Detail View */
         <Card className="border-border/50 backdrop-blur-sm bg-card/80 overflow-hidden shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent pb-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5">
-                {/* Large Cosmic Icon */}
-                <div className="h-20 w-20 shrink-0 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/10 shadow-[0_0_20px_rgba(139,92,246,0.15)] animate-pulse-glow">
-                  <div className="text-4xl">🪐</div>
-                </div>
+          {/* Compact Header Section */}
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-purple-500/5 to-transparent py-3 sm:py-4">
+            {/* Single Row: Back + Chart Info + Actions */}
+            <div className="flex items-center gap-3">
+              {/* Back Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeChartDetails}
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
 
-                <div>
-                  <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary">
-                    {selectedChart.base?.request_subject?.name || 'Unknown Chart'}
-                  </CardTitle>
+              {/* Cosmic Icon - Smaller */}
+              <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/10">
+                <span className="text-lg">🪐</span>
+              </div>
 
-                  {/* Compact Metadata Row */}
-                  <div className="flex flex-wrap items-center gap-3 mt-3">
-                    <div className="flex items-center gap-1.5 text-sm bg-background/50 border border-primary/10 px-2.5 py-1 rounded-full text-muted-foreground shadow-sm">
-                      <Calendar className="h-3.5 w-3.5 text-blue-400" />
-                      <span>{selectedChart.base?.request_subject?.dob || 'N/A'}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-sm bg-background/50 border border-primary/10 px-2.5 py-1 rounded-full text-muted-foreground shadow-sm">
-                      <Clock className="h-3.5 w-3.5 text-green-400" />
-                      <span>{selectedChart.base?.request_subject?.time || 'N/A'}</span>
-                    </div>
-
-                    {selectedChart.base?.request_subject?.location && (
-                      <div className="flex items-center gap-1.5 text-sm bg-background/50 border border-primary/10 px-2.5 py-1 rounded-full text-muted-foreground shadow-sm">
-                        <MapPin className="h-3.5 w-3.5 text-red-400" />
-                        <span>{selectedChart.base.request_subject.location.city || 'Unknown City'}</span>
-                      </div>
-                    )}
-                  </div>
+              {/* Chart Name & Meta - Inline */}
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-base sm:text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary truncate">
+                  {selectedChart.base?.request_subject?.name || 'Unknown Chart'}
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span>{selectedChart.base?.request_subject?.dob || 'N/A'}</span>
+                  <span className="text-border">•</span>
+                  <span>{selectedChart.base?.request_subject?.time || 'N/A'}</span>
+                  {selectedChart.base?.request_subject?.location?.city && (
+                    <>
+                      <span className="text-border">•</span>
+                      <span className="truncate max-w-[80px]">{selectedChart.base.request_subject.location.city}</span>
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 self-start md:self-center mt-2 md:mt-0">
+              <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   onClick={() => toggleFavorite(selectedChart.chart_id)}
                   title={isFavorite(selectedChart.chart_id) ? 'Remove from favorites' : 'Add to favorites'}
-                  className="p-2.5 rounded-full hover:bg-yellow-500/10 transition-colors border border-transparent hover:border-yellow-500/20"
+                  className="p-1.5 rounded-full hover:bg-yellow-500/10 transition-colors"
                 >
                   <Star
-                    className={`h-5 w-5 ${isFavorite(selectedChart.chart_id)
+                    className={`h-4 w-4 ${isFavorite(selectedChart.chart_id)
                       ? 'fill-yellow-500 text-yellow-500'
                       : 'text-muted-foreground hover:text-yellow-500'
                       }`}
                   />
                 </button>
                 <Button
-                  onClick={() => {
-                    const newState = !showDailyForecast;
-                    setShowDailyForecast(newState);
-                    if (newState) onViewModeChange?.('daily');
-                    else onViewModeChange?.(null);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className={`border-yellow-500/50 hover:bg-yellow-500/10 ${showDailyForecast ? 'bg-yellow-500/10' : ''} transition-all`}
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => openDeleteConfirm(selectedChart.chart_id, selectedChart.base?.request_subject?.name || 'This chart', e)}
+                  className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Delete chart"
                 >
-                  <Sparkles className="h-4 w-4 mr-2 text-yellow-500" />
-                  {showDailyForecast ? 'Hide Forecast' : 'Daily Forecast'}
-                </Button>
-                <Button
-                  onClick={handleChatClick}
-                  variant="default"
-                  size="sm"
-                  className="cosmic-glow shadow-lg shadow-primary/20"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Chat with AI
-                </Button>
-                <Button onClick={closeChartDetails} variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
-                  <X className="h-5 w-5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {/* Daily Transits Section */}
-            {showDailyForecast && (
-              <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                <DailyCosmicChat key={selectedChart.chart_id} chartId={selectedChart.chart_id} />
+            {/* Zodiac Signs Row */}
+            {selectedChart.base?.charts?.planets && (
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-4 pt-4 border-t border-border/30">
+                {/* Sun Sign */}
+                {(() => {
+                  const planets = selectedChart.base.charts.planets;
+                  // Handle both array and object formats
+                  const planetsArray = Array.isArray(planets) ? planets : Object.values(planets);
+                  const sun = planetsArray.find((p: any) => p.name === 'Sun') as { name: string; current_sign: number } | undefined;
+                  if (!sun) return null;
+                  return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+                      <span className="text-amber-400">☉</span>
+                      <span className="text-xs sm:text-sm font-medium text-amber-300">{getZodiacSign(sun.current_sign)}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* Moon Sign */}
+                {(() => {
+                  const planets = selectedChart.base.charts.planets;
+                  const planetsArray = Array.isArray(planets) ? planets : Object.values(planets);
+                  const moon = planetsArray.find((p: any) => p.name === 'Moon') as { name: string; current_sign: number } | undefined;
+                  if (!moon) return null;
+                  return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-400/10 border border-slate-400/30">
+                      <span className="text-slate-300">☽</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-300">{getZodiacSign(moon.current_sign)}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* Ascendant (first planet in list or Lagna) */}
+                {(() => {
+                  const planets = selectedChart.base.charts.planets;
+                  const planetsArray = Array.isArray(planets) ? planets : Object.values(planets);
+                  const asc = planetsArray.find((p: any) => p.name === 'Ascendant' || p.name === 'Lagna') as { name: string; current_sign: number } | undefined;
+                  if (!asc) return null;
+                  return (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30">
+                      <span className="text-purple-400">↑</span>
+                      <span className="text-xs sm:text-sm font-medium text-purple-300">{getZodiacSign(asc.current_sign)}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
+          </CardHeader>
 
-            {/* PDF Report Card - Always visible */}
-            <div className="mb-6 animate-in fade-in duration-500">
-              <PDFReportCard
-                chartId={selectedChart.chart_id}
-                chartName={selectedChart.base?.request_subject?.name || 'Your Chart'}
-              />
+          <CardContent className="pt-4 sm:pt-6">
+            {/* Guidance Tips */}
+            <div className="mb-6 p-3 sm:p-4 rounded-lg bg-gradient-to-r from-primary/5 via-purple-500/5 to-transparent border border-primary/10">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 mt-0.5">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">What you can do:</p>
+                  <ul className="space-y-1.5 text-xs sm:text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">1.</span>
+                      <span><strong className="text-foreground">Chat with AI</strong> — Ask about your day, relationships, career, or get personalized predictions</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">2.</span>
+                      <span><strong className="text-foreground">Explore your chart</strong> — Learn about your planets, houses, and dashas in depth</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">3.</span>
+                      <span><strong className="text-foreground">Get PDF report</strong> — Download a comprehensive 20+ page Vedic astrology analysis</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
+
+            {/* Primary Action - Centered Chat Button with constrained width */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="relative">
+                <Button
+                  onClick={handleChatClick}
+                  className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-md cosmic-glow h-11 sm:h-12 text-sm sm:text-base shadow-lg shadow-primary/20 px-6 sm:px-8"
+                >
+                  <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  Chat with AI Astrologer
+                </Button>
+                {/* Pulsing indicator */}
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
+                </span>
+              </div>
+              <p className="text-center text-[11px] sm:text-xs text-muted-foreground mt-2">
+                👆 Click here to start your personalized cosmic conversation
+              </p>
+            </div>
+
+            {/* Compact PDF Report Section - Just a link/button style */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 p-4 rounded-lg bg-gradient-to-r from-accent/5 to-orange-500/5 border border-border/50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-accent/20 to-orange-500/20 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-accent" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <h4 className="font-semibold text-sm">Complete PDF Report</h4>
+                  <p className="text-[11px] text-muted-foreground">20+ pages • $1.50</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPDFReport(!showPDFReport)}
+                className="border-accent/30 hover:border-accent hover:bg-accent/10 text-xs"
+              >
+                {showPDFReport ? 'Hide Details' : 'View Details'}
+              </Button>
+            </div>
+
+            {/* Expanded PDF Details */}
+            {showPDFReport && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                <PDFReportCard
+                  chartId={selectedChart.chart_id}
+                  chartName={selectedChart.base?.request_subject?.name || 'Your Chart'}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+      )
+      }
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => !open && setDeleteConfirm({ open: false, chartId: null, chartName: '' })}>
@@ -530,7 +618,7 @@ const ChartList = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 };
 

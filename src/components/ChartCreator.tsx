@@ -177,10 +177,10 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4" onFocus={handleInputFocus}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name (Optional)</Label>
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" onFocus={handleInputFocus}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="name" className="text-xs sm:text-sm">Name (Optional)</Label>
             <Input
               id="name"
               placeholder="John Doe"
@@ -190,8 +190,8 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="gender">Gender</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="gender" className="text-xs sm:text-sm">Gender</Label>
             <Select
               value={formData.gender}
               onValueChange={(value) => setFormData({ ...formData, gender: value })}
@@ -208,9 +208,9 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="dob">Date of Birth</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="dob" className="text-xs sm:text-sm">Date of Birth</Label>
             <Input
               id="dob"
               type="date"
@@ -221,8 +221,8 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="time">Time of Birth</Label>
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="time" className="text-xs sm:text-sm">Time of Birth</Label>
             <Input
               id="time"
               type="time"
@@ -232,7 +232,7 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
               disabled={timeUnknown}
               className="bg-muted/50 border-border/50"
             />
-            <div className="flex items-center space-x-2 pt-1">
+            <div className="flex items-center space-x-2 pt-0.5 sm:pt-1">
               <Checkbox
                 id="timeUnknown"
                 checked={timeUnknown}
@@ -244,16 +244,17 @@ const ChartCreator = ({ onSuccess, onChartCreated }: ChartCreatorProps) => {
                     setFormData(prev => ({ ...prev, time: '' }));
                   }
                 }}
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4"
               />
-              <Label htmlFor="timeUnknown" className="text-sm font-normal text-muted-foreground cursor-pointer">
+              <Label htmlFor="timeUnknown" className="text-[11px] sm:text-sm font-normal text-muted-foreground cursor-pointer">
                 I don't know exact time (Use 12:00 PM)
               </Label>
             </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>City of Birth</Label>
+        <div className="space-y-1 sm:space-y-2">
+          <Label className="text-xs sm:text-sm">City of Birth</Label>
           <CitySearch
             onSelect={handleCitySelect}
             className="w-full"

@@ -127,9 +127,9 @@ const Analytics = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
+    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <Button
             variant="outline"
             size="sm"
@@ -140,12 +140,12 @@ const Analytics = () => {
             Back to Admin
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-            <p className="text-muted-foreground">Comprehensive insights into user behavior and system performance</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Analytics Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Comprehensive insights into user behavior and system performance</p>
           </div>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Select time range" />
           </SelectTrigger>
           <SelectContent>
@@ -221,13 +221,15 @@ const Analytics = () => {
 
       {/* Detailed Analytics Tabs - Simplified to 5 working tabs */}
       <Tabs defaultValue="intents" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="intents">User Intents</TabsTrigger>
-          <TabsTrigger value="sentiment">Sentiment</TabsTrigger>
-          <TabsTrigger value="quality">Response Quality</TabsTrigger>
-          <TabsTrigger value="remedies">Remedies</TabsTrigger>
-          <TabsTrigger value="charts">Charts</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex min-w-max">
+            <TabsTrigger value="intents" className="text-sm">User Intents</TabsTrigger>
+            <TabsTrigger value="sentiment" className="text-sm">Sentiment</TabsTrigger>
+            <TabsTrigger value="quality" className="text-sm">Response Quality</TabsTrigger>
+            <TabsTrigger value="remedies" className="text-sm">Remedies</TabsTrigger>
+            <TabsTrigger value="charts" className="text-sm">Charts</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Intents Tab */}
         <TabsContent value="intents" className="space-y-4">

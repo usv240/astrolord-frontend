@@ -44,14 +44,18 @@ import { createLogger } from '@/utils/logger';
 
 const log = createLogger('Dashboard');
 
+// Valid tabs - includes all navigable tabs
+const VALID_TABS = ['home', 'charts', 'create', 'chat', 'relationship'];
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { refresh: refreshQuota } = useQuota();
 
-  // Initialize state from URL params
-  const activeTab = searchParams.get('tab') || 'home';
+  // Initialize state from URL params - redirect old tabs to home
+  const tabParam = searchParams.get('tab') || 'home';
+  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'home';
   const selectedChartId = searchParams.get('chartId') || undefined;
   const viewMode = searchParams.get('mode') || undefined;
 
@@ -108,23 +112,23 @@ const Dashboard = () => {
 
   const handleTabChange = useCallback((value: string) => {
     const newParams = new URLSearchParams(searchParams);
-
-    // Allow navigation to chat tab - show inline chart selector if no chart selected
     newParams.set('tab', value);
-    if (value !== 'charts') {
-      newParams.delete('mode');
-    }
-    // Clear chart selection when navigating away from detailed view
-    if (value === 'create' || value === 'charts') {
+    // Clear mode when changing tabs
+    newParams.delete('mode');
+    // When switching to chat tab, clear chartId so user sees chart selector first
+    if (value === 'chat') {
       newParams.delete('chartId');
     }
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
-  const handleChartSelect = useCallback((chartId: string) => {
+  const handleChartSelect = useCallback((chartId: string, mode?: 'analysis' | 'daily') => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', 'chat');
     newParams.set('chartId', chartId);
+    if (mode) {
+      newParams.set('mode', mode);
+    }
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
@@ -137,13 +141,14 @@ const Dashboard = () => {
       {/* Onboarding Flow */}
       <OnboardingManager />
 
-      <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark">
+      <div className={`overflow-x-hidden bg-gradient-to-br from-cosmic-darker via-background to-cosmic-dark dark:from-cosmic-darker dark:via-background dark:to-cosmic-dark ${activeTab === 'chat' && selectedChartId ? 'h-screen flex flex-col' : 'min-h-screen'
+        }`}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl animate-pulse-glow" />
         </div>
 
-        <header className="border-b border-border/50 backdrop-blur-sm bg-card/30 relative z-10">
+        <header className="border-b border-border/50 backdrop-blur-sm bg-card/30 relative z-10 shrink-0">
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Mobile Menu Sidebar */}
@@ -252,8 +257,8 @@ const Dashboard = () => {
         </header>
 
 
-        <main className="relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr]">
+        <main className={`relative z-10 ${activeTab === 'chat' && selectedChartId ? 'flex-1 min-h-0' : ''}`}>
+          <div className={`grid grid-cols-1 lg:grid-cols-[250px_1fr] ${activeTab === 'chat' && selectedChartId ? 'h-full' : ''}`}>
             {/* Left Sidebar - Navigation */}
             <aside className="hidden lg:block p-4 pt-8">
               <DashboardNav
@@ -263,7 +268,10 @@ const Dashboard = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="space-y-6 px-4 lg:px-8 py-8 pb-24 lg:pb-8 max-w-6xl">
+            <main className={`transition-all duration-200 ${activeTab === 'chat' && selectedChartId
+              ? 'h-full p-0 overflow-hidden'
+              : 'space-y-6 px-4 lg:px-8 py-8 pb-24 lg:pb-8 max-w-6xl'
+              }`}>
               {/* Home Tab - New Overview Page */}
               {activeTab === 'home' && (
                 <DashboardHome
@@ -274,10 +282,10 @@ const Dashboard = () => {
 
               {/* Charts Tab */}
               {activeTab === 'charts' && (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <h1 className="text-3xl font-bold">My Charts</h1>
-                    <p className="text-muted-foreground">View, manage, and search all your birth charts</p>
+                    <h1 className="text-xl sm:text-3xl font-bold">My Charts</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground">View, manage, and search all your birth charts</p>
                   </div>
                   <ChartList
                     key={chartListRefreshKey}
@@ -312,19 +320,19 @@ const Dashboard = () => {
 
               {/* Create Chart Tab */}
               {activeTab === 'create' && (
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-3 md:space-y-4">
                   <div>
-                    <h1 className="text-3xl font-bold">Create New Chart</h1>
-                    <p className="text-muted-foreground">Generate your birth chart with precise calculations</p>
+                    <h1 className="text-lg sm:text-xl md:text-3xl font-bold">Create New Chart</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Generate your birth chart with precise calculations</p>
                   </div>
                   <Card className="border-border/50 backdrop-blur-sm bg-card/80">
-                    <CardHeader>
-                      <CardTitle>Enter Your Birth Details</CardTitle>
-                      <CardDescription>
+                    <CardHeader className="py-3 px-4 sm:py-4 sm:px-6 md:py-6">
+                      <CardTitle className="text-base sm:text-lg md:text-xl">Enter Your Birth Details</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
                         Your accurate birth information helps us calculate your personalized chart
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
                       <ChartCreator
                         onSuccess={() => {
                           // Increment refresh key to reload chart list
@@ -344,11 +352,13 @@ const Dashboard = () => {
 
               {/* Chat Tab */}
               {activeTab === 'chat' && (
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-3xl font-bold">Chat with AI Astrologer</h1>
-                    <p className="text-muted-foreground">Ask anything about your chart and get instant insights</p>
-                  </div>
+                <div className={selectedChartId ? "h-full" : "space-y-2"}>
+                  {!selectedChartId && (
+                    <div className="mb-0">
+                      <h1 className="text-xl sm:text-2xl font-bold">Chat with AI Astrologer</h1>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Ask anything about your chart and get instant insights</p>
+                    </div>
+                  )}
                   {selectedChartId ? (
                     <AIChat
                       chartId={selectedChartId}
@@ -375,10 +385,10 @@ const Dashboard = () => {
               {activeTab === 'relationship' && (
                 <div className="space-y-2">
                   <div>
-                    <h1 className="text-3xl font-bold">Relationship Match</h1>
-                    <p className="text-muted-foreground">Check compatibility and connection dynamics with others</p>
+                    <h1 className="text-xl sm:text-3xl font-bold">Relationship Match</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground">Check compatibility and connection dynamics with others</p>
                   </div>
-                  <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
                     {/* Sidebar List */}
                     <div className="lg:col-span-1 space-y-4 order-2 lg:order-1 mt-8 lg:mt-0">
                       <Card className="border-border/50 bg-card/50">
@@ -445,31 +455,31 @@ const Dashboard = () => {
 
                     {/* Main Content */}
                     <div className="lg:col-span-3 order-1 lg:order-2">
-                      <div className="text-center mb-4">
-                        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary backdrop-blur-sm inline-block">Find Your Match</h2>
-                        <div className="flex items-center justify-center gap-2 mt-3 text-muted-foreground">
-                          <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium border border-primary/20">Vedic Matchmaking</span>
-                          <span>+</span>
-                          <span className="bg-secondary/10 text-secondary px-3 py-1 rounded-full text-xs font-medium border border-secondary/20">AI Analysis</span>
-                          <span>+</span>
-                          <span className="bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full text-xs font-medium border border-purple-500/20">Ask Anything</span>
+                      <div className="text-center mb-3 sm:mb-4">
+                        <h2 className="text-xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary backdrop-blur-sm inline-block">Find Your Match</h2>
+                        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-2 sm:mt-3 text-muted-foreground flex-wrap">
+                          <span className="bg-primary/10 text-primary px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-primary/20">Vedic Matchmaking</span>
+                          <span className="text-xs">+</span>
+                          <span className="bg-secondary/10 text-secondary px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-secondary/20">AI Analysis</span>
+                          <span className="text-xs">+</span>
+                          <span className="bg-purple-500/10 text-purple-400 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border border-purple-500/20">Ask Anything</span>
                         </div>
                       </div>
                       {!selectedMatchId && !isCreating ? (
-                        <div className="flex flex-col items-center justify-center min-h-[500px] border border-dashed border-primary/20 rounded-xl bg-card/20 p-8 text-center animate-in fade-in zoom-in duration-300">
-                          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-6 animate-pulse-glow shadow-lg shadow-primary/10">
-                            <Heart className="w-12 h-12 text-primary fill-primary/20" />
+                        <div className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[500px] border border-dashed border-primary/20 rounded-xl bg-card/20 p-4 sm:p-8 text-center animate-in fade-in zoom-in duration-300">
+                          <div className="w-14 h-14 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-4 sm:mb-6 animate-pulse-glow shadow-lg shadow-primary/10">
+                            <Heart className="w-7 h-7 sm:w-12 sm:h-12 text-primary fill-primary/20" />
                           </div>
-                          <h2 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary mb-4">Find Your Cosmic Connection</h2>
-                          <p className="text-muted-foreground max-w-lg mb-8 text-lg leading-relaxed">
-                            Discover the hidden dynamics of your relationships using ancient Vedic wisdom combined with advanced AI analysis.
+                          <h2 className="text-xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-secondary mb-2 sm:mb-4">Find Your Cosmic Connection</h2>
+                          <p className="text-muted-foreground max-w-lg mb-4 sm:mb-8 text-sm sm:text-lg leading-relaxed">
+                            Discover relationship dynamics using Vedic wisdom combined with AI analysis.
                           </p>
                           <Button
-                            size="lg"
+                            size="default"
                             onClick={() => setIsCreating(true)}
-                            className="cosmic-glow text-lg px-10 py-8 h-auto rounded-full transition-all hover:scale-105 shadow-xl shadow-primary/20"
+                            className="cosmic-glow text-sm sm:text-lg px-6 sm:px-10 py-4 sm:py-8 h-auto rounded-full transition-all hover:scale-105 shadow-xl shadow-primary/20"
                           >
-                            <Sparkles className="mr-3 h-6 w-6" />
+                            <Sparkles className="mr-2 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
                             Create New Match
                           </Button>
                         </div>
@@ -491,7 +501,9 @@ const Dashboard = () => {
         </main>
 
         {/* Mobile Bottom Navigation */}
-        <MobileBottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        {(!selectedChartId || activeTab !== 'chat') && (
+          <MobileBottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+        )}
       </div>
 
       {/* Delete Match Confirmation Dialog */}

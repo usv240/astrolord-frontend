@@ -9,7 +9,7 @@
  */
 
 import * as React from 'react';
-import { MOBILE_BREAKPOINTS, getMediaQuery } from './mobile';
+import { MOBILE_BREAKPOINTS, getMediaQuery } from '@/utils/mobile';
 
 // ============================================================================
 // useIsMobile - Enhanced version with all breakpoints

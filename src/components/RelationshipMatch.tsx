@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { cleanChatContent } from '@/utils/textUtils';
 import { relationshipAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Heart, Loader2, Brain, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, Loader2, Brain, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { MessageFormatter } from './MessageFormatter';
 import { CitySearch } from './CitySearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import CentralizedChat, { ChatMessage } from './CentralizedChat';
@@ -44,73 +46,6 @@ interface RelationshipMatchProps {
   onNewMatch?: () => void;
 }
 
-// Clean report content by removing XML tags, JSON data, and other artifacts
-const cleanReport = (report: string): string => {
-  if (!report) return '';
-
-  let cleaned = report;
-
-  // Strategy 1: Extract content between <response> tags if available
-  const responseMatch = cleaned.match(/<response>([\s\S]*?)<\/response>/i);
-  if (responseMatch && responseMatch[1].trim().length > 10) {
-    cleaned = responseMatch[1];
-  }
-
-  // Strategy 2: Remove entire analysis blocks
-  cleaned = cleaned.replace(/\\n<analysis>[\s\S]*?<\/analysis>\\n/gi, '');
-  cleaned = cleaned.replace(/<analysis>[\s\S]*?<\/analysis>/gi, '');
-
-  // Strategy 3: Remove any leading/trailing artifacts
-  // Remove opening paren with quote and stuff before response content
-  cleaned = cleaned.replace(/^[\s]*\(\s*['\"][^'\"]*['\"\s]*/gm, '');
-
-  // Strategy 4: Remove closing artifacts (tuple/dict with token info)
-  // Pattern: , {'prompt_tokens': ...})
-  cleaned = cleaned.replace(/,\s*\{\s*['\"]?prompt_tokens['\"]?[\s\S]*?\}\s*\)\s*$/gi, '');
-  cleaned = cleaned.replace(/,\s*\{\s*['\"]?prompt_tokens['\"]?[\s\S]*?\}\s*$/gi, '');
-
-  // Strategy 5: Remove response/suggestion XML tags
-  cleaned = cleaned.replace(/<response>/gi, '');
-  cleaned = cleaned.replace(/<\/response>/gi, '');
-  cleaned = cleaned.replace(/<suggestions>[\s\S]*?<\/suggestions>/gi, '');
-
-  // Strategy 6: Remove JSON code blocks
-  cleaned = cleaned.replace(/```json[\s\S]*?```/g, '');
-  cleaned = cleaned.replace(/``json[\s\S]*?``/g, '');
-  cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
-
-  // Strategy 7: Remove any remaining token dictionaries/tuples
-  cleaned = cleaned.replace(/\{\s*['\"]?(?:prompt_tokens|completion_tokens|total_tokens)['\"]?[\s\S]*?\}/g, '');
-  cleaned = cleaned.replace(/\(\s*['\"][^'\"]*?['\"],\s*\{[^}]*\}\s*\)/g, '');
-
-  // Strategy 8: Clean up escaped content
-  cleaned = cleaned.replace(/\\'/g, "'");
-  cleaned = cleaned.replace(/\\"/g, '"');
-  cleaned = cleaned.replace(/\\n/g, '\n');
-
-  // Strategy 9: Remove stray markup
-  cleaned = cleaned.replace(/^\s*[\(\[\`]+\s*$/gm, '');
-  cleaned = cleaned.replace(/^\s*[\)\]\`]+\s*$/gm, '');
-
-  // Strategy 10: Clean whitespace
-  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-  cleaned = cleaned.trim();
-
-  // Fallback: if content is too short, it might be entirely artifacts
-  if (cleaned.length < 30) {
-    // Try to extract any readable text from original
-    const readable = report
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\{[^}]*\}/g, ' ')
-      .replace(/\([^)]*\{[^}]*\}[^)]*\)/g, ' ')
-      .replace(/[\(\)]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return readable.slice(0, 500) || 'Analysis processing...';
-  }
-
-  return cleaned;
-};
 
 // Formatted verdict content component for better display
 const FormattedVerdictContent = ({
@@ -284,7 +219,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
 
   // Quota refresh hook for updating compatibility usage
   const { refresh: refreshQuota } = useQuota();
-  
+
   // Confetti celebration hook
   const { trigger: triggerConfetti, ConfettiComponent } = useConfetti();
 
@@ -310,7 +245,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
       if (res.data.chat_history && Array.isArray(res.data.chat_history)) {
         const history = res.data.chat_history.map((m: any, i: number) => ({
           role: m.role,
-          content: m.role === 'assistant' ? cleanReport(m.content) : m.content,
+          content: m.role === 'assistant' ? cleanChatContent(m.content) : m.content,
           analysis: m.analysis,
           suggestions: m.suggestions,
           id: m.id || `msg-${i}`
@@ -396,7 +331,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
         if (fullResponse.data.chat_history && Array.isArray(fullResponse.data.chat_history)) {
           const history = fullResponse.data.chat_history.map((m: any, i: number) => ({
             role: m.role,
-            content: m.role === 'assistant' ? cleanReport(m.content) : m.content,
+            content: m.role === 'assistant' ? cleanChatContent(m.content) : m.content,
             analysis: m.analysis,
             suggestions: m.suggestions,
             id: m.id || `msg-${i}`
@@ -492,7 +427,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
         responseContent = String(response.data);
       }
 
-      responseContent = cleanReport(responseContent);
+      responseContent = cleanChatContent(responseContent);
 
       setChatHistory(prev => [...prev, {
         role: 'assistant',
@@ -754,7 +689,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
                   </div>
                 ) : (
                   <FormattedVerdictContent
-                    content={cleanReport(result.report)}
+                    content={cleanChatContent(result.report)}
                     suggestions={result.suggestions}
                     onSuggestionClick={handleSendChatMessage}
                     chatLoading={chatLoading}
@@ -763,6 +698,7 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
               </CardContent>
             )}
           </Card>
+
 
           {/* CENTRALIZED CHAT COMPONENT */}
           <CentralizedChat
@@ -774,17 +710,19 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
             onSendMessage={handleSendChatMessage}
             onSubmitFeedback={handleSubmitFeedback}
             onClearHistory={handleClearChatHistory}
-            emptyStateTitle="Ask me anything about your relationship compatibility..."
+            emptyStateTitle="Ask about marriage timing, compatibility issues, future predictions..."
             suggestedQuestions={[
-              'How compatible are we based on Nadi Dosha?',
-              'What does the Bhakut score indicate?',
-              'Are there any doshas I should worry about?',
-              'What are the best periods for us?',
-              'What remedies can improve our compatibility?'
+              'When is the best time for us to get married?',
+              'What problems might we face in this relationship?',
+              'How long will our marriage last?',
+              'Are we emotionally compatible?',
+              'What can we do to improve our bond?',
+              'Will we have children?',
+              'How compatible are our families?',
+              'What are the danger periods in our relationship?'
             ]}
             scrollHeight="h-[500px]"
-            maxWidth="max-w-full"
-            compactHeader={true}
+            cardClassName="w-full"
           />
 
           <Button variant="outline" onClick={handleReset} className="w-full">
@@ -802,11 +740,22 @@ const RelationshipMatch = ({ matchId, onNewMatch }: RelationshipMatchProps) => {
               Astrological Reasoning
             </DialogTitle>
             <DialogDescription>
-              The internal logic used to generate this response.
+              The astrological analysis behind this response.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 p-4 bg-muted rounded-md font-mono text-xs whitespace-pre-wrap">
-            {selectedAnalysis}
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-primary/10">
+            {selectedAnalysis && (
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <MessageFormatter
+                  content={selectedAnalysis
+                    .replace(/\\n/g, '\n')
+                    .replace(/^\s*\n/gm, '\n')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim()
+                  }
+                />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -24,25 +24,25 @@ interface EmptyStatesProps {
 const CosmicIllustration = ({ type }: { type: string }) => {
   if (type === 'no-charts') {
     return (
-      <div className="relative w-32 h-32 mx-auto mb-6">
+      <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 mx-auto mb-3 sm:mb-4 md:mb-6">
         {/* Outer ring */}
         <div className="absolute inset-0 rounded-full border-2 border-dashed border-primary/30 animate-spin" style={{ animationDuration: '20s' }} />
         {/* Middle ring */}
-        <div className="absolute inset-4 rounded-full border-2 border-secondary/40 animate-spin" style={{ animationDuration: '15s', animationDirection: 'reverse' }} />
+        <div className="absolute inset-3 sm:inset-4 rounded-full border-2 border-secondary/40 animate-spin" style={{ animationDuration: '15s', animationDirection: 'reverse' }} />
         {/* Center icon */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center animate-pulse">
-            <BarChart3 className="h-8 w-8 text-primary" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center animate-pulse">
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary" />
           </div>
         </div>
         {/* Floating planets */}
-        <Star className="absolute top-2 right-2 h-3 w-3 text-accent animate-pulse" />
-        <Moon className="absolute bottom-4 left-0 h-4 w-4 text-secondary animate-bounce" style={{ animationDelay: '0.5s' }} />
-        <Sun className="absolute top-8 left-2 h-3 w-3 text-accent animate-pulse" style={{ animationDelay: '1s' }} />
+        <Star className="absolute top-1 right-1 sm:top-2 sm:right-2 h-2 w-2 sm:h-3 sm:w-3 text-accent animate-pulse" />
+        <Moon className="absolute bottom-2 left-0 sm:bottom-4 h-3 w-3 sm:h-4 sm:w-4 text-secondary animate-bounce" style={{ animationDelay: '0.5s' }} />
+        <Sun className="absolute top-6 left-1 sm:top-8 sm:left-2 h-2 w-2 sm:h-3 sm:w-3 text-accent animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
     );
   }
-  
+
   if (type === 'no-matches') {
     return (
       <div className="relative w-32 h-32 mx-auto mb-6">
@@ -61,7 +61,7 @@ const CosmicIllustration = ({ type }: { type: string }) => {
       </div>
     );
   }
-  
+
   if (type === 'no-history') {
     return (
       <div className="relative w-32 h-32 mx-auto mb-6">
@@ -77,7 +77,7 @@ const CosmicIllustration = ({ type }: { type: string }) => {
       </div>
     );
   }
-  
+
   // Default for no-results
   return (
     <div className="relative w-32 h-32 mx-auto mb-6">
@@ -158,30 +158,30 @@ export const EmptyStates = ({ type, onPrimaryAction, onSecondaryAction }: EmptyS
   return (
     <div className="w-full animate-in fade-in zoom-in-95 duration-500">
       <Card className={`border-border/50 backdrop-blur-sm bg-gradient-to-br ${config.gradient} border-dashed`}>
-        <CardContent className="py-12 text-center">
-          <div className="space-y-6">
+        <CardContent className="py-6 sm:py-8 md:py-12 px-4 sm:px-6 text-center">
+          <div className="space-y-3 sm:space-y-4 md:space-y-6">
             {/* Animated Illustration */}
             <CosmicIllustration type={type} />
 
             {/* Main Message */}
-            <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+            <div className="space-y-1 sm:space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
                 {config.title}
               </h3>
-              <p className="text-muted-foreground max-w-md mx-auto">{config.description}</p>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">{config.description}</p>
             </div>
 
             {/* Benefits List */}
-            <div className="bg-card/50 border border-border/50 rounded-xl p-4 max-w-md mx-auto text-left animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-              <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
+            <div className="bg-card/50 border border-border/50 rounded-lg sm:rounded-xl p-3 sm:p-4 max-w-md mx-auto text-left animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+              <p className="text-xs sm:text-sm font-semibold mb-2 sm:mb-3 flex items-center gap-2">
+                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
                 What You Can Do:
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-1 sm:space-y-2">
                 {config.benefits.map((benefit, idx) => (
-                  <li 
-                    key={idx} 
-                    className="text-sm text-muted-foreground flex items-start gap-2"
+                  <li
+                    key={idx}
+                    className="text-xs sm:text-sm text-muted-foreground flex items-start gap-1.5 sm:gap-2"
                     style={{ animationDelay: `${(idx + 3) * 100}ms` }}
                   >
                     <span className="text-accent mt-0.5">✦</span>
@@ -198,10 +198,11 @@ export const EmptyStates = ({ type, onPrimaryAction, onSecondaryAction }: EmptyS
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center animate-in fade-in slide-in-from-bottom-4 duration-500 delay-400">
-              <Button 
-                onClick={onPrimaryAction} 
-                className="cosmic-glow sm:w-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            <div className="flex flex-col gap-2 sm:gap-3 justify-center animate-in fade-in slide-in-from-bottom-4 duration-500 delay-400">
+              <Button
+                onClick={onPrimaryAction}
+                className="cosmic-glow w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                size="default"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {config.primaryText}
@@ -210,20 +211,19 @@ export const EmptyStates = ({ type, onPrimaryAction, onSecondaryAction }: EmptyS
                 <Button
                   onClick={onSecondaryAction}
                   variant="outline"
-                  className="border-border/50 sm:w-auto transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  className="border-border/50 w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  size="default"
                 >
                   {config.secondaryText}
                 </Button>
               )}
             </div>
 
-            {/* Trust Message */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 max-w-md mx-auto animate-in fade-in duration-500 delay-500">
-              <p className="text-xs text-muted-foreground flex items-center gap-2 justify-center">
+            {/* Trust Message - Hidden on very small screens */}
+            <div className="hidden sm:block bg-primary/5 border border-primary/20 rounded-lg p-2 sm:p-3 max-w-md mx-auto animate-in fade-in duration-500 delay-500">
+              <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-2 justify-center">
                 <Lock className="h-3 w-3 shrink-0" />
-                <span>
-                  <span className="font-semibold">Your data is encrypted & private</span>
-                </span>
+                <span className="font-semibold">Your data is encrypted & private</span>
               </p>
             </div>
           </div>

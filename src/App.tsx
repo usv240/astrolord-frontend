@@ -11,6 +11,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { CommandPalette } from '@/components/CommandPalette';
 import { SkipToContent } from '@/components/SkipToContent';
+import ScrollToTop from '@/components/ScrollToTop';
 
 // Lazy load non-critical components
 const Toaster = lazy(() => import('@/components/ui/toaster').then(m => ({ default: m.Toaster })));
@@ -103,131 +104,132 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <SkipToContent />
-              <OfflineIndicator />
-              <CommandPalette />
-              <CookieConsent />
-              <ErrorBoundary>
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                  {/* Public site routes under shared layout */}
-                  <Route element={<PublicLayout />}>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/pricing" element={<Pricing />} />
-                    <Route path="/faq" element={<FAQ />} />
-                    <Route path="/learn" element={<Learn />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/refund-policy" element={<RefundPolicy />} />
-                    <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/:slug" element={<BlogPost />} />
-                    <Route path="/service-unavailable" element={<ServiceUnavailable />} />
-                    <Route path="/payment-status" element={<PaymentStatus />} />
-                    <Route path="/feedback" element={<FeedbackPage />} />
-                    <Route path="/app/feedback" element={<FeedbackPage />} />
-                    <Route path="/coming-soon" element={<ComingSoon />} />
-                    <Route path="/roadmap" element={<ComingSoon />} />
-                  </Route>
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute>
-                      <AdminOverview />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <ProtectedRoute>
-                      <AdminUsers />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/payments"
-                  element={
-                    <ProtectedRoute>
-                      <AdminPayments />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/promo"
-                  element={
-                    <ProtectedRoute>
-                      <AdminPromo />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/pricing"
-                  element={
-                    <ProtectedRoute>
-                      <AdminPricing />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/system"
-                  element={
-                    <ProtectedRoute>
-                      <AdminSystem />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/system/:tab"
-                  element={
-                    <ProtectedRoute>
-                      <AdminSystem />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/moderation"
-                  element={
-                    <ProtectedRoute>
-                      <AdminModeration />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/analytics"
-                  element={
-                    <ProtectedRoute>
-                      <Analytics />
-                    </ProtectedRoute>
-                  }
-                />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
-            </BrowserRouter>
+                <ScrollToTop />
+                <SkipToContent />
+                <OfflineIndicator />
+                <CommandPalette />
+                <CookieConsent />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      {/* Public site routes under shared layout */}
+                      <Route element={<PublicLayout />}>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/auth/callback" element={<AuthCallback />} />
+                        <Route path="/contact" element={<Contact />} />
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/faq" element={<FAQ />} />
+                        <Route path="/learn" element={<Learn />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/refund-policy" element={<RefundPolicy />} />
+                        <Route path="/blog" element={<Blog />} />
+                        <Route path="/blog/:slug" element={<BlogPost />} />
+                        <Route path="/service-unavailable" element={<ServiceUnavailable />} />
+                        <Route path="/payment-status" element={<PaymentStatus />} />
+                        <Route path="/feedback" element={<FeedbackPage />} />
+                        <Route path="/app/feedback" element={<FeedbackPage />} />
+                        <Route path="/coming-soon" element={<ComingSoon />} />
+                        <Route path="/roadmap" element={<ComingSoon />} />
+                      </Route>
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <Dashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/settings"
+                        element={
+                          <ProtectedRoute>
+                            <Settings />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute>
+                            <AdminOverview />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <ProtectedRoute>
+                            <AdminUsers />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/payments"
+                        element={
+                          <ProtectedRoute>
+                            <AdminPayments />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/promo"
+                        element={
+                          <ProtectedRoute>
+                            <AdminPromo />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/pricing"
+                        element={
+                          <ProtectedRoute>
+                            <AdminPricing />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/system"
+                        element={
+                          <ProtectedRoute>
+                            <AdminSystem />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/system/:tab"
+                        element={
+                          <ProtectedRoute>
+                            <AdminSystem />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/moderation"
+                        element={
+                          <ProtectedRoute>
+                            <AdminModeration />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/analytics"
+                        element={
+                          <ProtectedRoute>
+                            <Analytics />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </ErrorBoundary>
+              </BrowserRouter>
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>

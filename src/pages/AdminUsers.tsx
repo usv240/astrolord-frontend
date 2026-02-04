@@ -300,6 +300,65 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
+        {/* Email Management Section */}
+        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-600" />
+                Welcome Email Management
+              </h3>
+              <p className="text-xs text-gray-600 mt-1">Check and resend welcome emails to users who didn't receive them</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await adminAPI.getEmailStatus();
+                    const data = response.data;
+                    alert(
+                      `📊 Welcome Email Status:\n\n` +
+                      `Total Users: ${data.summary.total_users}\n` +
+                      `Emails Sent: ${data.summary.welcome_email_sent}\n` +
+                      `Emails Missing: ${data.summary.welcome_email_missing}\n` +
+                      `Send Rate: ${data.summary.welcome_email_rate}%\n\n` +
+                      `Users missing emails:\n` +
+                      data.users_missing_welcome_email.slice(0, 10).map((u: any) => `• ${u.email}`).join('\n')
+                    );
+                  } catch (err: any) {
+                    alert('Failed to get email status: ' + (err.message || 'Unknown error'));
+                  }
+                }}
+                className="px-4 py-2 bg-white text-blue-600 border border-blue-300 rounded-lg text-sm font-semibold hover:bg-blue-50 transition flex items-center gap-2"
+              >
+                📊 Check Status
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('⚠️ This will resend welcome emails to ALL users who haven\'t received them. Continue?')) return;
+
+                  try {
+                    const response = await adminAPI.resendAllWelcomeEmails();
+                    const data = response.data;
+                    alert(
+                      `✅ Welcome Emails Resent!\n\n` +
+                      `Attempted: ${data.total_attempted}\n` +
+                      `Successful: ${data.successful}\n` +
+                      `Failed: ${data.failed}`
+                    );
+                  } catch (err: any) {
+                    alert('Failed to resend emails: ' + (err.message || 'Unknown error'));
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                Resend All Missing
+              </button>
+            </div>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 mb-6">
             <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />

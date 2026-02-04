@@ -286,7 +286,7 @@ const AdminDashboard = () => {
       // Initialize with empty arrays to show dialog immediately
       const userDetails = { ...res.data, charts: [], sessions: [] };
       setSelectedUser(userDetails);
-      
+
       // 2. Fetch Charts (Async)
       adminAPI.getUserCharts(userId).then(resCharts => {
         setSelectedUser(prev => prev ? { ...prev, charts: resCharts.data } : null);
@@ -309,9 +309,9 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <Button 
-        variant="ghost" 
+    <div className="container mx-auto p-4 sm:p-6">
+      <Button
+        variant="ghost"
         className="mb-4 pl-0 hover:bg-transparent hover:text-primary"
         onClick={() => navigate('/dashboard')}
       >
@@ -319,47 +319,49 @@ const AdminDashboard = () => {
         Back to Dashboard
       </Button>
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Admin Dashboard</h1>
         <button
           onClick={() => navigate('/analytics')}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="px-3 py-2 text-sm sm:px-4 sm:text-base bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           📊 Advanced Analytics
         </button>
       </div>
-      
-      <div className="flex space-x-4 mb-6 border-b">
-        <button
-          className={`py-2 px-4 ${activeTab === 'stats' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-          onClick={() => setActiveTab('stats')}
-        >
-          System Stats
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'queries' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-          onClick={() => setActiveTab('queries')}
-        >
-          User Queries
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'feedback' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-          onClick={() => setActiveTab('feedback')}
-        >
-          Chat Feedback
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'general_feedback' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-          onClick={() => setActiveTab('general_feedback')}
-        >
-          General Feedback
-        </button>
-        <button
-          className={`py-2 px-4 ${activeTab === 'users' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          Users
-        </button>
+
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+        <div className="flex space-x-2 sm:space-x-4 border-b min-w-max">
+          <button
+            className={`py-2 px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap ${activeTab === 'stats' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+            onClick={() => setActiveTab('stats')}
+          >
+            System Stats
+          </button>
+          <button
+            className={`py-2 px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap ${activeTab === 'queries' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+            onClick={() => setActiveTab('queries')}
+          >
+            User Queries
+          </button>
+          <button
+            className={`py-2 px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap ${activeTab === 'feedback' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+            onClick={() => setActiveTab('feedback')}
+          >
+            Chat Feedback
+          </button>
+          <button
+            className={`py-2 px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap ${activeTab === 'general_feedback' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+            onClick={() => setActiveTab('general_feedback')}
+          >
+            General Feedback
+          </button>
+          <button
+            className={`py-2 px-3 sm:px-4 text-sm sm:text-base whitespace-nowrap ${activeTab === 'users' ? 'border-b-2 border-blue-500 font-bold' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Users
+          </button>
+        </div>
       </div>
 
       {loading && <div className="text-center py-10">Loading...</div>}
@@ -378,33 +380,33 @@ const AdminDashboard = () => {
                   Updated {new Date(liveStats.timestamp).toLocaleTimeString()}
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">Active Sessions</p>
                   <p className="text-3xl font-bold">{liveStats.active_sessions}</p>
                 </div>
-                
+
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">Requests/Min</p>
                   <p className="text-3xl font-bold">{liveStats.requests_per_minute}</p>
                 </div>
-                
+
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">Errors/Min</p>
                   <p className="text-3xl font-bold">{liveStats.errors_per_minute}</p>
                 </div>
-                
+
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">Error Rate</p>
                   <p className="text-3xl font-bold">{liveStats.error_rate.toFixed(1)}%</p>
                 </div>
-                
+
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">Avg Latency</p>
                   <p className="text-3xl font-bold">{liveStats.avg_latency_5min.toFixed(0)}ms</p>
                 </div>
-                
+
                 <div className="bg-white bg-opacity-20 rounded-lg p-4">
                   <p className="text-sm opacity-90 mb-1">API Keys</p>
                   <p className="text-3xl font-bold">
@@ -421,30 +423,30 @@ const AdminDashboard = () => {
               <h3 className="text-gray-500 text-sm font-medium mb-2">Total Requests</h3>
               <p className="text-3xl font-bold text-blue-600">{stats.total_requests}</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Avg Latency</h3>
               <p className="text-3xl font-bold text-green-600">{stats.avg_latency.toFixed(0)} ms</p>
               <p className="text-xs text-gray-500 mt-1">Mean response time</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Input Tokens</h3>
               <p className="text-3xl font-bold text-indigo-600">{stats.prompt_tokens.toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">Sent to AI</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Output Tokens</h3>
               <p className="text-3xl font-bold text-purple-600">{stats.completion_tokens.toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">Received from AI</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Cache Hit Rate</h3>
               <p className="text-3xl font-bold text-teal-600">{(stats.cache_hit_rate * 100).toFixed(1)}%</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Error Rate</h3>
               <p className="text-3xl font-bold text-red-600">{(stats.error_rate * 100).toFixed(2)}%</p>
@@ -459,19 +461,19 @@ const AdminDashboard = () => {
               <p className="text-3xl font-bold text-blue-500">{stats.p50_latency_ms.toFixed(0)} ms</p>
               <p className="text-xs text-gray-500 mt-1">50th percentile</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">P95 Latency</h3>
               <p className="text-3xl font-bold text-orange-500">{stats.p95_latency_ms.toFixed(0)} ms</p>
               <p className="text-xs text-gray-500 mt-1">95th percentile</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">P99 Latency</h3>
               <p className="text-3xl font-bold text-red-500">{stats.p99_latency_ms.toFixed(0)} ms</p>
               <p className="text-xs text-gray-500 mt-1">99th percentile</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Avg Tokens/Req</h3>
               <p className="text-3xl font-bold text-indigo-500">{stats.avg_tokens_per_request.toFixed(0)}</p>
@@ -487,19 +489,19 @@ const AdminDashboard = () => {
               <p className="text-3xl font-bold text-yellow-600">{stats.rate_limit_hits}</p>
               <p className="text-xs text-gray-500 mt-1">Total (hourly + daily)</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Hourly Limits</h3>
               <p className="text-3xl font-bold text-orange-600">{stats.hourly_limit_hits}</p>
               <p className="text-xs text-gray-500 mt-1">Users throttled</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">API Keys Health</h3>
               <p className="text-3xl font-bold text-green-600">{stats.healthy_keys}/{stats.active_keys}</p>
               <p className="text-xs text-gray-500 mt-1">Healthy keys</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-gray-500 text-sm font-medium mb-2">Failed Keys</h3>
               <p className="text-3xl font-bold text-red-600">{stats.failed_keys}</p>
@@ -511,7 +513,7 @@ const AdminDashboard = () => {
           {tokenTrends && (
             <>
               <h2 className="text-xl font-bold mb-4 mt-8">📊 Token Usage Trends ({tokenTrends.period_days} days)</h2>
-              
+
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <div className="bg-white rounded-lg shadow p-6">
@@ -519,29 +521,28 @@ const AdminDashboard = () => {
                   <p className="text-3xl font-bold text-blue-600">{tokenTrends.summary.total_tokens.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">{tokenTrends.summary.total_messages.toLocaleString()} messages</p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">Daily Average</h3>
                   <p className="text-3xl font-bold text-purple-600">{tokenTrends.summary.avg_daily_tokens.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">{tokenTrends.summary.avg_tokens_per_message.toFixed(0)} tokens/msg</p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">Trend</h3>
-                  <p className={`text-3xl font-bold ${
-                    tokenTrends.summary.trend === 'increasing' ? 'text-orange-600' : 
-                    tokenTrends.summary.trend === 'decreasing' ? 'text-green-600' : 
-                    'text-gray-600'
-                  }`}>
-                    {tokenTrends.summary.trend === 'increasing' ? '📈' : 
-                     tokenTrends.summary.trend === 'decreasing' ? '📉' : '➡️'}
+                  <p className={`text-3xl font-bold ${tokenTrends.summary.trend === 'increasing' ? 'text-orange-600' :
+                      tokenTrends.summary.trend === 'decreasing' ? 'text-green-600' :
+                        'text-gray-600'
+                    }`}>
+                    {tokenTrends.summary.trend === 'increasing' ? '📈' :
+                      tokenTrends.summary.trend === 'decreasing' ? '📉' : '➡️'}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {tokenTrends.summary.trend === 'insufficient_data' ? 'Need more data' : 
-                     `${tokenTrends.summary.trend} ${tokenTrends.summary.trend_percentage.toFixed(1)}%`}
+                    {tokenTrends.summary.trend === 'insufficient_data' ? 'Need more data' :
+                      `${tokenTrends.summary.trend} ${tokenTrends.summary.trend_percentage.toFixed(1)}%`}
                   </p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">30-Day Projection</h3>
                   <p className="text-3xl font-bold text-indigo-600">${tokenTrends.projections.estimated_monthly_cost_usd.toFixed(2)}</p>
@@ -555,8 +556,8 @@ const AdminDashboard = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={tokenTrends.daily_breakdown}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       tick={{ fontSize: 12 }}
                       angle={-45}
                       textAnchor="end"
@@ -565,20 +566,20 @@ const AdminDashboard = () => {
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
                     <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="prompt_tokens" 
+                    <Area
+                      type="monotone"
+                      dataKey="prompt_tokens"
                       stackId="1"
-                      stroke="#3b82f6" 
-                      fill="#3b82f6" 
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
                       name="Prompt Tokens"
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="completion_tokens" 
+                    <Area
+                      type="monotone"
+                      dataKey="completion_tokens"
                       stackId="1"
-                      stroke="#10b981" 
-                      fill="#10b981" 
+                      stroke="#10b981"
+                      fill="#10b981"
                       name="Completion Tokens"
                     />
                   </AreaChart>
@@ -591,8 +592,8 @@ const AdminDashboard = () => {
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={tokenTrends.daily_breakdown}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
+                    <XAxis
+                      dataKey="date"
                       tick={{ fontSize: 12 }}
                       angle={-45}
                       textAnchor="end"
@@ -647,7 +648,7 @@ const AdminDashboard = () => {
           {performanceData && (
             <>
               <h2 className="text-xl font-bold mb-4 mt-8">⚡ Performance Monitoring (Last {performanceData.period_hours}h)</h2>
-              
+
               {/* Performance Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                 <div className="bg-white rounded-lg shadow p-6">
@@ -655,13 +656,13 @@ const AdminDashboard = () => {
                   <p className="text-3xl font-bold text-blue-600">{performanceData.summary.total_operations.toLocaleString()}</p>
                   <p className="text-xs text-gray-500 mt-1">Tracked requests</p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">Avg Latency</h3>
                   <p className="text-3xl font-bold text-green-600">{performanceData.summary.avg_latency_ms.toFixed(0)} ms</p>
                   <p className="text-xs text-gray-500 mt-1">Across all endpoints</p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">Slow Operations</h3>
                   <p className={`text-3xl font-bold ${performanceData.summary.slow_rate > 10 ? 'text-red-600' : 'text-orange-600'}`}>
@@ -669,7 +670,7 @@ const AdminDashboard = () => {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">{performanceData.summary.slow_rate.toFixed(1)}% rate (&gt;1000ms)</p>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-gray-500 text-sm font-medium mb-2">Errors</h3>
                   <p className={`text-3xl font-bold ${performanceData.summary.error_rate > 5 ? 'text-red-600' : 'text-yellow-600'}`}>
@@ -694,7 +695,7 @@ const AdminDashboard = () => {
                         <ul className="list-disc list-inside space-y-1">
                           {performanceData.degradation_alerts.map((alert, idx) => (
                             <li key={idx}>
-                              <strong>{alert.operation_name}</strong>: {alert.degradation_percentage.toFixed(1)}% slower 
+                              <strong>{alert.operation_name}</strong>: {alert.degradation_percentage.toFixed(1)}% slower
                               (baseline: {alert.baseline_avg_ms.toFixed(0)}ms → recent: {alert.recent_avg_ms.toFixed(0)}ms)
                             </li>
                           ))}
@@ -716,8 +717,8 @@ const AdminDashboard = () => {
                     'P99': stats.p99_ms,
                   }))}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       tick={{ fontSize: 11 }}
                       angle={-15}
                       textAnchor="end"
@@ -756,25 +757,24 @@ const AdminDashboard = () => {
                       {Object.entries(performanceData.endpoint_stats)
                         .sort(([, a], [, b]) => b.count - a.count)
                         .map(([operation, stats]) => (
-                        <tr key={operation} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm font-medium text-gray-900">{operation}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{stats.count}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">{stats.avg_ms.toFixed(0)} ms</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{stats.p50_ms.toFixed(0)} ms</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600">{stats.p95_ms.toFixed(0)} ms</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{stats.p99_ms.toFixed(0)} ms</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              stats.slow_rate > 10 ? 'bg-red-100 text-red-800' :
-                              stats.slow_rate > 5 ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {stats.slow_rate.toFixed(1)}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{stats.error_count}</td>
-                        </tr>
-                      ))}
+                          <tr key={operation} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{operation}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{stats.count}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">{stats.avg_ms.toFixed(0)} ms</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{stats.p50_ms.toFixed(0)} ms</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600">{stats.p95_ms.toFixed(0)} ms</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{stats.p99_ms.toFixed(0)} ms</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className={`px-2 py-1 text-xs rounded-full ${stats.slow_rate > 10 ? 'bg-red-100 text-red-800' :
+                                  stats.slow_rate > 5 ? 'bg-orange-100 text-orange-800' :
+                                    'bg-green-100 text-green-800'
+                                }`}>
+                                {stats.slow_rate.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{stats.error_count}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -805,9 +805,8 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">{op.operation_name}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <span className={`font-bold ${
-                                op.duration_ms > 3000 ? 'text-red-600' : 'text-orange-600'
-                              }`}>
+                              <span className={`font-bold ${op.duration_ms > 3000 ? 'text-red-600' : 'text-orange-600'
+                                }`}>
                                 {op.duration_ms.toFixed(0)} ms
                               </span>
                             </td>
@@ -895,7 +894,7 @@ const AdminDashboard = () => {
                       <span className="text-red-600 font-bold">👎 Dislike</span>
                     )}
                   </td>
-                  <td 
+                  <td
                     className="px-6 py-4 text-sm text-gray-500 max-w-md cursor-pointer hover:bg-gray-50 transition-colors"
                     onClick={() => setSelectedFeedback(f)}
                   >
@@ -1053,15 +1052,15 @@ const AdminDashboard = () => {
               ID: {selectedUser?.user.id} | Joined: {selectedUser?.user.created_at ? new Date(selectedUser.user.created_at).toLocaleDateString() : '-'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">Charts ({selectedUser?.charts.length})</h3>
               <p className="text-sm text-gray-500 mb-4">Click a chart to view its related chat sessions.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {selectedUser?.charts.map((chart: any) => (
-                  <div 
-                    key={chart.id} 
+                  <div
+                    key={chart.id}
                     className={`border p-3 rounded cursor-pointer transition-colors ${selectedChartId === chart.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-gray-50 hover:bg-gray-100'}`}
                     onClick={() => setSelectedChartId(chart.id === selectedChartId ? null : chart.id)}
                   >
@@ -1077,7 +1076,7 @@ const AdminDashboard = () => {
             {selectedChartId && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-300">
                 <h3 className="text-lg font-semibold mb-2">
-                  Chat Sessions for Selected Chart 
+                  Chat Sessions for Selected Chart
                   <span className="text-sm font-normal text-gray-500 ml-2">
                     ({selectedUser?.sessions.filter((s: any) => String(s.context?.chart_id) === String(selectedChartId) || String(s.chart_id) === String(selectedChartId)).length})
                   </span>
@@ -1086,23 +1085,23 @@ const AdminDashboard = () => {
                   {selectedUser?.sessions
                     .filter((s: any) => String(s.context?.chart_id) === String(selectedChartId) || String(s.chart_id) === String(selectedChartId))
                     .map((session: any) => (
-                    <div key={session.id} className="border p-3 rounded bg-gray-50">
-                      <p className="font-medium text-sm">Session ID: {session.id}</p>
-                      <p className="text-xs text-gray-500">Updated: {new Date(session.updated_at).toLocaleString()}</p>
-                      <div className="mt-2 max-h-60 overflow-y-auto text-sm space-y-2">
-                        {session.messages?.map((msg: any, idx: number) => (
-                          <div key={idx} className={`p-2 rounded ${msg.role === 'user' ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-200'}`}>
-                            <div className={`font-semibold text-xs mb-1 ${msg.role === 'user' ? 'text-blue-700' : 'text-gray-700'}`}>
-                              {msg.role === 'user' ? 'User' : 'AI'}
+                      <div key={session.id} className="border p-3 rounded bg-gray-50">
+                        <p className="font-medium text-sm">Session ID: {session.id}</p>
+                        <p className="text-xs text-gray-500">Updated: {new Date(session.updated_at).toLocaleString()}</p>
+                        <div className="mt-2 max-h-60 overflow-y-auto text-sm space-y-2">
+                          {session.messages?.map((msg: any, idx: number) => (
+                            <div key={idx} className={`p-2 rounded ${msg.role === 'user' ? 'bg-blue-50 border border-blue-100' : 'bg-white border border-gray-200'}`}>
+                              <div className={`font-semibold text-xs mb-1 ${msg.role === 'user' ? 'text-blue-700' : 'text-gray-700'}`}>
+                                {msg.role === 'user' ? 'User' : 'AI'}
+                              </div>
+                              <div className="whitespace-pre-wrap text-gray-800">
+                                {msg.content}
+                              </div>
                             </div>
-                            <div className="whitespace-pre-wrap text-gray-800">
-                              {msg.content}
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   {selectedUser?.sessions.filter((s: any) => String(s.context?.chart_id) === String(selectedChartId) || String(s.chart_id) === String(selectedChartId)).length === 0 && (
                     <p className="text-gray-500 italic">No chat sessions found for this chart.</p>
                   )}

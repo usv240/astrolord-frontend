@@ -3,8 +3,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, HelpCircle, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageSEO } from '@/components/SEO';
+import { useIsMobile } from '@/hooks/useMobileOptimized';
 
 const FAQ = () => {
+  const isMobile = useIsMobile();
+
   const faqs = [
     {
       question: "What is Vedic astrology and how is it different?",
@@ -78,87 +81,103 @@ const FAQ = () => {
         </div>
 
         <div className="relative z-10">
-        <header className="container mx-auto px-4 py-6">
-          <nav className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link to="/">
-                <Button variant="ghost" size="icon" className="cosmic-glow">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-full bg-primary/10 cosmic-glow">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  AstroLord
-                </span>
+          {/* Mobile-optimized header */}
+          <header className="container mx-auto px-4 py-4 md:py-6">
+            <nav className="flex items-center justify-between">
+              {/* Left side - Back button and branding */}
+              <div className="flex items-center gap-2 md:gap-4">
+                <Link to="/">
+                  <Button variant="ghost" size="icon" className="cosmic-glow">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                </Link>
+                {!isMobile && (
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-full bg-primary/10 cosmic-glow">
+                      <Sparkles className="h-5 md:h-6 w-5 md:w-6 text-primary" />
+                    </div>
+                    <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                      AstroLord
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="flex gap-3">
-              <ThemeToggle />
-              <Button variant="outline" asChild className="border-border/50">
-                <Link to="/login">Sign In</Link>
-              </Button>
-              <Button asChild className="cosmic-glow">
-                <Link to="/register">Get Started</Link>
-              </Button>
-            </div>
-          </nav>
-        </header>
 
-        <main className="container mx-auto px-6 py-12">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-accent via-purple-400 to-pink-500 text-transparent bg-clip-text">
-                Frequently Asked Questions
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                Everything you need to know about AstroLord
-              </p>
-            </div>
+              {/* Right side - Actions */}
+              <div className="flex items-center gap-2 md:gap-3">
+                <ThemeToggle />
+                {isMobile ? (
+                  // Mobile: Show only Get Started button
+                  <Button asChild size="sm" className="cosmic-glow text-sm px-3">
+                    <Link to="/register">Get Started</Link>
+                  </Button>
+                ) : (
+                  // Desktop: Show both buttons
+                  <>
+                    <Button variant="outline" asChild className="border-border/50">
+                      <Link to="/login">Sign In</Link>
+                    </Button>
+                    <Button asChild className="cosmic-glow">
+                      <Link to="/register">Get Started</Link>
+                    </Button>
+                  </>
+                )}
+              </div>
+            </nav>
+          </header>
 
-            {/* FAQ Items */}
-            <div className="space-y-6">
-              {faqs.map((faq, index) => (
-                <div
-                  key={index}
-                  className="p-6 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 hover:cosmic-glow transition-all"
-                >
-                  <div className="flex items-start gap-4">
-                    <HelpCircle className="h-6 w-6 text-accent flex-shrink-0 mt-1" />
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">{faq.question}</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {faq.answer}
-                      </p>
+          <main className="container mx-auto px-4 md:px-6 py-6 md:py-12">
+            <div className="max-w-4xl mx-auto">
+              {/* Header */}
+              <div className="text-center mb-6 md:mb-12">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-accent via-purple-400 to-pink-500 text-transparent bg-clip-text leading-tight">
+                  Frequently Asked Questions
+                </h1>
+                <p className="text-base md:text-xl text-muted-foreground px-2">
+                  Everything you need to know about AstroLord
+                </p>
+              </div>
+
+              {/* FAQ Items */}
+              <div className="space-y-3 md:space-y-6">
+                {faqs.map((faq, index) => (
+                  <div
+                    key={index}
+                    className="p-4 md:p-6 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 hover:cosmic-glow transition-all"
+                  >
+                    <div className="flex items-start gap-3 md:gap-4">
+                      <HelpCircle className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'} text-accent flex-shrink-0 mt-0.5 md:mt-1`} />
+                      <div>
+                        <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3">{faq.question}</h3>
+                        <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+                          {faq.answer}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            {/* Still have questions */}
-            <div className="mt-12 p-8 rounded-lg bg-gradient-to-br from-accent/10 to-purple-500/10 backdrop-blur-sm border border-accent/30 text-center">
-              <h3 className="text-2xl font-bold mb-4">Want to Learn More?</h3>
-              <p className="text-muted-foreground mb-6">
-                Explore our comprehensive learning center or contact support for help
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/learn">
-                  <Button className="cosmic-glow">
-                    Learn Vedic Astrology
-                  </Button>
-                </Link>
-                <Link to="/contact">
-                  <Button variant="outline" className="border-border/50">
-                    Contact Support
-                  </Button>
-                </Link>
+              {/* Still have questions */}
+              <div className="mt-8 md:mt-12 p-5 md:p-8 rounded-lg bg-gradient-to-br from-accent/10 to-purple-500/10 backdrop-blur-sm border border-accent/30 text-center">
+                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Want to Learn More?</h3>
+                <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-6 px-2">
+                  Explore our comprehensive learning center or contact support for help
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
+                  <Link to="/learn">
+                    <Button size={isMobile ? "default" : "lg"} className="cosmic-glow w-full sm:w-auto">
+                      Learn Vedic Astrology
+                    </Button>
+                  </Link>
+                  <Link to="/contact">
+                    <Button size={isMobile ? "default" : "lg"} variant="outline" className="border-border/50 w-full sm:w-auto">
+                      Contact Support
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
           </main>
         </div>
       </div>
@@ -167,3 +186,4 @@ const FAQ = () => {
 };
 
 export default FAQ;
+

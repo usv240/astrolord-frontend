@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import { aiAPI, transitsAPI } from '@/lib/api';
+import { cleanChatContent } from '@/utils/textUtils';
+import { aiAPI, transitsAPI, chartAPI } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useQuota } from '@/hooks/useQuota';
 import { useRateLimit, handleRateLimitError } from '@/hooks/useRateLimit';
 import CentralizedChat, { type ChatMessage } from './CentralizedChat';
-import { Star, Moon, ArrowLeft } from 'lucide-react';
+import { Star, Moon, ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react';
 import {
   trackMessageSent,
   trackFocusModeUsed,
@@ -103,14 +105,14 @@ const generateContextualSuggestions = (content: string): string[] => {
 };
 
 // Process message content - moved outside component
+// Process message content - using shared cleaning logic
 const processMessageContent = (content: string): { cleanContent: string; suggestions?: string[] } => {
-  let cleanContent = content
-    .replace(PATTERNS.analysis, '')
-    .replace(PATTERNS.response, '')
-    .trim();
+  // Use shared robust cleaning first
+  // Note: cleanChatContent removes JSON blocks, but we need to extract suggestions first.
 
   let suggestions: string[] | undefined;
-  const jsonMatch = cleanContent.match(PATTERNS.jsonSuggestions);
+  // Try to find suggestions in original content before cleaning
+  const jsonMatch = content.match(PATTERNS.jsonSuggestions);
 
   if (jsonMatch?.[1]) {
     try {
@@ -121,8 +123,10 @@ const processMessageContent = (content: string): { cleanContent: string; suggest
     } catch {
       // Ignore parse errors
     }
-    cleanContent = cleanContent.replace(PATTERNS.jsonBlock, '').trim();
   }
+
+  // Now clean the content
+  const cleanContent = cleanChatContent(content);
 
   if (!suggestions?.length) {
     suggestions = generateContextualSuggestions(cleanContent);
@@ -145,23 +149,22 @@ const TransitCard = memo(({ transit }: { transit: { planet: string; transit_sign
 TransitCard.displayName = 'TransitCard';
 
 // Memoized Focus Mode Button
-const FocusModeButton = memo(({ 
-  focusModeItem, 
-  isActive, 
-  onClick 
-}: { 
-  focusModeItem: typeof FOCUS_MODES[number]; 
-  isActive: boolean; 
+const FocusModeButton = memo(({
+  focusModeItem,
+  isActive,
+  onClick
+}: {
+  focusModeItem: typeof FOCUS_MODES[number];
+  isActive: boolean;
   onClick: () => void;
 }) => (
   <Button
     variant="outline"
     size="sm"
-    className={`text-xs h-7 border transition-all duration-200 ${focusModeItem.color} ${
-      isActive
-        ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-        : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
-    }`}
+    className={`text-xs h-7 border transition-all duration-200 ${focusModeItem.color} ${isActive
+      ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+      : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
+      }`}
     onClick={onClick}
   >
     {focusModeItem.label}
@@ -179,12 +182,53 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
   const [moonSign, setMoonSign] = useState<string>('');
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [chartDetails, setChartDetails] = useState<{
+    name: string;
+    dob: string;
+    time: string;
+    city: string;
+  } | null>(null);
 
   // Get quota hook for updating usage after chat
   const { refresh: fetchQuota } = useQuota();
-  
+
   // Rate limiting with countdown for better UX
   const { isRateLimited, countdownDisplay, trigger: triggerRateLimit } = useRateLimit('chat', 60000);
+
+  // Fetch chart details when chartId changes
+  useEffect(() => {
+    const fetchChartDetails = async () => {
+      if (!chartId) return;
+      try {
+        const response = await chartAPI.getMyChart(chartId);
+        if (response.data) {
+          const chartData = response.data.chart || response.data;
+          // Handle both flat structure (list) and nested structure (get)
+          const name = chartData.name || chartData.request_subject?.name || 'Unknown';
+          const dob = chartData.dob || chartData.request_subject?.dob || '';
+          const time = chartData.time || chartData.request_subject?.time || '';
+
+          // Location handling
+          let city = chartData.location?.city || chartData.city || '';
+          if (!city && chartData.request_subject?.location) {
+            city = chartData.request_subject.location.city || '';
+          }
+
+          setChartDetails({
+            name,
+            dob,
+            time,
+            city
+          });
+        }
+      } catch (error) {
+        // Silent error for UI enhancement
+        console.error('Failed to fetch chart details', error);
+      }
+    };
+
+    fetchChartDetails();
+  }, [chartId]);
 
   // Memoize suggested questions based on mode
   const suggestedQuestions = useMemo(
@@ -443,7 +487,7 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
   // Memoized sendMessage with useCallback
   const sendMessage = useCallback(async (messageText?: string) => {
     log.debug('sendMessage called', { chartId, sessionId, mode, messageText: messageText?.substring(0, 50) });
-    
+
     if (!chartId || (!messageText && !input.trim())) return;
 
     // For analysis mode, ensure session exists
@@ -548,7 +592,7 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
       }
     } catch (error: any) {
       log.error('sendMessage error', { error: error.message, status: error.response?.status });
-      
+
       // Handle rate limiting with countdown
       if (handleRateLimitError(error, triggerRateLimit)) {
         toast.error("You're chatting too fast! Please wait before sending another message.");
@@ -591,44 +635,87 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
 
   const focusControls = useMemo(() =>
     mode === 'analysis' ? (
-      <div className="flex flex-wrap gap-2 pt-2">
-        {FOCUS_MODES.map((m) => (
-          <Button
-            key={m.id}
-            variant="outline"
-            size="sm"
-            className={`text-xs h-7 border transition-all duration-200 ${m.color} ${focusMode === m.id
-                ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
-                : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
-              }`}
-            onClick={() => handleFocusModeChange(m.id)}
-          >
-            {m.label}
-          </Button>
-        ))}
+      <div className="space-y-0.5">
+
+        {/* Mobile: Dropdown for focus modes */}
+        <div className="md:hidden">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground/80 font-medium">Focus:</span>
+            <Select value={focusMode} onValueChange={(value) => handleFocusModeChange(value)}>
+              <SelectTrigger className="h-6 text-[10px] flex-1 bg-card/60 border-primary/20">
+                <SelectValue placeholder="Select focus mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {FOCUS_MODES.map((mode) => (
+                  <SelectItem key={mode.id} value={mode.id} className="text-xs">
+                    {mode.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Desktop: Inline button grid */}
+        <div className="hidden md:block">
+          <div className="flex flex-wrap gap-1 items-center">
+            <span className="text-[10px] text-muted-foreground/80 mr-1">Focus:</span>
+            {FOCUS_MODES.map((m) => (
+              <Button
+                key={m.id}
+                variant="outline"
+                size="sm"
+                className={`text-[10px] h-5 px-2 border transition-all duration-200 ${m.color} ${focusMode === m.id
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                onClick={() => handleFocusModeChange(m.id)}
+              >
+                {m.label}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
     ) : null, [mode, focusMode, handleFocusModeChange]);
 
   return (
-    <Card className="flex flex-col h-full bg-card/30 backdrop-blur-sm border-border/40">
-      <CardHeader className="py-4 border-b border-border/40 space-y-3 shrink-0">
+    <Card className="flex flex-col h-full bg-card/30 backdrop-blur-sm border-border/40 overflow-hidden">
+      <CardHeader className="py-1.5 px-3 border-b border-border/40 space-y-1 shrink-0">
         <div className="flex items-center">
           {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack} className="mr-2 h-8 w-8 hover:bg-primary/10">
-              <ArrowLeft className="h-5 w-5 py-0.5" />
+            <Button variant="ghost" size="icon" onClick={onBack} className="mr-1.5 h-7 w-7 hover:bg-primary/10">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
-          <CardTitle className="text-lg flex items-center gap-2">
+          <div className="flex-1 min-w-0">
             {mode === 'daily' ? (
-              <>
-                <Moon className="h-5 w-5 text-primary" /> Daily Cosmic Chat
-              </>
+              <div className="flex items-center gap-2">
+                <Moon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold">Daily Cosmic Chat</span>
+              </div>
             ) : (
-              <>
-                <Star className="h-5 w-5 text-primary" /> Chart Analysis
-              </>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Star className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm font-semibold truncate">{chartDetails ? chartDetails.name : 'Chart Analysis'}</span>
+                {chartDetails && (
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-0.5">
+                      <Calendar className="h-2.5 w-2.5 opacity-70" /> {chartDetails.dob}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <Clock className="h-2.5 w-2.5 opacity-70" /> {chartDetails.time}
+                    </span>
+                    {chartDetails.city && (
+                      <span className="flex items-center gap-0.5">
+                        <MapPin className="h-2.5 w-2.5 opacity-70" /> {chartDetails.city}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
-          </CardTitle>
+          </div>
         </div>
 
         {headerContent && (
@@ -664,15 +751,16 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
         )}
 
         {focusControls && (
-          <div className="border-t border-border/40 pt-3 mt-2">
+          <div className="border-t border-border/40 pt-1">
             {focusControls}
           </div>
         )}
       </CardHeader>
 
-      <CardContent className="p-4 flex-1 flex flex-col gap-4 overflow-hidden">
+      <CardContent className="p-2 md:p-3 flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
         <CentralizedChat
           messages={messages}
+          cardClassName="w-full h-full flex flex-col"
           setMessages={setMessages}
           input={input}
           setInput={setInput}
@@ -689,7 +777,7 @@ const AIChat = memo(({ chartId, onViewChart, onSwitchChart, mode = 'analysis', o
               : 'Select a chart from My Charts to start chatting.'
           }
           suggestedQuestions={mode === 'daily' ? DAILY_SUGGESTED_QUESTIONS : SUGGESTED_QUESTIONS}
-          scrollHeight="h-[500px]"
+          scrollHeight="h-full"
           isRateLimited={isRateLimited}
           rateLimitCountdown={countdownDisplay}
         />
