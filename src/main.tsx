@@ -10,7 +10,7 @@ if (initialLoader) {
 
 // Polyfill requestIdleCallback for Safari/iOS
 (window as any).requestIdleCallback = (window as any).requestIdleCallback || function (cb: any) {
-  var start = Date.now();
+  const start = Date.now();
   return setTimeout(function () {
     cb({
       didTimeout: false,
