@@ -10,13 +10,13 @@ const log = createLogger('Firebase');
 // Firebase configuration from environment variables
 // Falls back to hardcoded values for backwards compatibility
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBK16JX-TSlDy26uUi0aZR5M0pwR8v-jyw",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "astrolord-5816a.firebaseapp.com",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "astrolord-5816a",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "astrolord-5816a.firebasestorage.app",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "776238367032",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:776238367032:web:8f1d7287516b80762f81cd",
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-8LTTZHTG43"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
@@ -50,7 +50,7 @@ export const getMessagingInstance = async () => {
  * VAPID key for web push notifications
  * From Firebase Console > Cloud Messaging > Web Push certificates
  */
-export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BC7W5JG77rAKE9_JbKr3BYI5yitSKy_OewdBdCSkIjb7mcXLxsNufx-H7bbnD2QbBODTEweE5jT2bbi4t-UqB8M';
+export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
 /**
  * Request notification permission and get FCM token
